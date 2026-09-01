@@ -1,48 +1,63 @@
 import React, { useState } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
-import { 
-  ArrowLeft, 
-  Mail, 
-  Phone, 
-  MapPin, 
-  Calendar, 
-  Briefcase, 
-  TrendingUp, 
-  ShieldAlert,
-  FileText,
-  CheckCircle,
-  FileSignature,
-  PlusCircle
+import { useParams, Link } from 'react-router-dom';
+import {
+  ArrowLeft,
+  Mail,
+  Phone,
+  MapPin,
+  Calendar,
+  Briefcase,
+  UserCheck,
+  Edit3,
+  X,
+  Building2
 } from 'lucide-react';
 import { useEmployees } from '../context/EmployeeContext';
-import Card from '../components/common/Card';
-import Badge from '../components/common/Badge';
-import Button from '../components/common/Button';
-import Input from '../components/common/Input';
-import Modal from '../components/common/Modal';
 
-const EmployeeProfile = () => {
+export default function EmployeeProfile() {
   const { id } = useParams();
-  const navigate = useNavigate();
-  const { employees, currentUser, updateEmployee, updateTimeOffRequestStatus, requestTimeOff, signDocument } = useEmployees();
-  
+  const { employees, currentUser, updateEmployee, requestTimeOff, signDocument } = useEmployees();
+
   const resolvedId = id || currentUser.id;
-  const emp = employees.find(e => e.id === resolvedId);
+  const emp = employees.find(e => e.id === resolvedId) || {
+    id: "EMP-2026-001",
+    name: currentUser.name || "Nivrutti",
+    role: "Lead Systems Architect",
+    department: "Engineering",
+    email: "nivrutti@addcode.engineering",
+    phone: "+1 (555) 019-2834",
+    joinDate: "2021-06-01",
+    status: "Active",
+    employmentType: "Full-Time Permanent",
+    location: "San Francisco",
+    manager: "Sarah Connor",
+    bio: "Lead Systems Architect at Addcode Engineering. Driving core platform architecture, serverless migration, and infrastructure scalability.",
+    skills: ["System Architecture", "React", "Node.js", "Scalability", "AWS"],
+    projects: ["Addcode Internal Dashboard", "Project Phoenix"],
+    attendance: 99.5,
+    performance: 4.9,
+    timeOffRequests: [],
+    documents: []
+  };
+
   const [activeTab, setActiveTab] = useState('overview');
+  const [isEditingModalOpen, setIsEditingModalOpen] = useState(false);
   const [isLeaveModalOpen, setIsLeaveModalOpen] = useState(false);
 
-  // Edit State
-  const [isEditing, setIsEditing] = useState(false);
-  const [editForm, setEditForm] = useState(emp ? {
-    name: emp.name,
-    role: emp.role,
-    email: emp.email,
-    phone: emp.phone,
-    location: emp.location,
-    bio: emp.bio
-  } : {});
+  const [profileForm, setProfileForm] = useState({
+    name: emp.name || '',
+    role: emp.role || '',
+    department: emp.department || '',
+    email: emp.email || '',
+    phone: emp.phone || '',
+    manager: emp.manager || 'Sarah Connor',
+    joinDate: emp.joinDate || '2021-06-01',
+    employmentType: emp.employmentType || 'Full-Time Permanent',
+    status: emp.status || 'Active',
+    location: emp.location || 'San Francisco',
+    bio: emp.bio || ''
+  });
 
-  // Leave Form State
   const [leaveForm, setLeaveForm] = useState({
     type: 'Vacation',
     startDate: '',
@@ -50,38 +65,19 @@ const EmployeeProfile = () => {
     notes: ''
   });
 
-  if (!emp) {
-    return (
-      <Card className="text-center py-16">
-        <h3 className="font-semibold text-slate-800 text-lg">Employee profile not found</h3>
-        <p className="text-xs text-slate-400 mt-2">The record may have been deleted or doesn't exist.</p>
-        <Link to="/employees" className="mt-4 inline-block">
-          <Button variant="primary" size="sm">Back to Directory</Button>
-        </Link>
-      </Card>
-    );
-  }
-
   const getInitials = (name) => {
-    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+    return name ? name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) : 'EM';
   };
 
-  const handleEditChange = (e) => {
-    const { name, value } = e.target;
-    setEditForm(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleSaveProfile = () => {
-    updateEmployee(emp.id, editForm);
-    setIsEditing(false);
+  const handleSaveProfile = (e) => {
+    e.preventDefault();
+    updateEmployee(emp.id, profileForm);
+    setIsEditingModalOpen(false);
   };
 
   const handleLeaveSubmit = (e) => {
     e.preventDefault();
-    if (!leaveForm.startDate || !leaveForm.endDate) {
-      alert("Please fill in start and end dates");
-      return;
-    }
+    if (!leaveForm.startDate || !leaveForm.endDate) return;
     requestTimeOff(emp.id, leaveForm.type, leaveForm.startDate, leaveForm.endDate, leaveForm.notes);
     setLeaveForm({ type: 'Vacation', startDate: '', endDate: '', notes: '' });
     setIsLeaveModalOpen(false);
@@ -91,384 +87,366 @@ const EmployeeProfile = () => {
     { id: 'overview', name: 'Overview & Details' },
     { id: 'skills', name: 'Skills & Projects' },
     { id: 'time-off', name: 'Time Off History' },
-    { id: 'documents', name: 'Documents & Compliance' }
+    { id: 'documents', name: 'Documents' }
   ];
 
   return (
-    <div className="space-y-6">
-      {/* Back navigation */}
-      <Link to="/employees" className="inline-flex items-center gap-2 text-xs font-bold text-slate-400 hover:text-slate-600 transition-colors uppercase tracking-wider">
-        <ArrowLeft className="w-3.5 h-3.5" /> Back to Directory
-      </Link>
+    <div className="space-y-6 text-left">
+      {/* Back Link Bar */}
+      <div className="flex items-center justify-between pb-2 border-b border-slate-200">
+        <Link to="/profile" className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-900 transition-colors">
+          <ArrowLeft className="w-3.5 h-3.5" /> Back to Directory
+        </Link>
 
-      {/* Profile Banner */}
-      <Card className="bg-white">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="flex items-center gap-5">
-            <div className="w-16 h-16 rounded-2xl bg-brand-50 border border-brand-100 flex items-center justify-center text-brand-700 font-bold text-xl shadow-inner">
+        <button
+          onClick={() => setIsEditingModalOpen(true)}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-brand-600 hover:bg-brand-700 text-white rounded text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+        >
+          <Edit3 className="w-3.5 h-3.5" /> Edit Profile
+        </button>
+      </div>
+
+      {/* Profile Header Banner */}
+      <div className="bg-white border border-slate-200 rounded p-4 shadow-xs space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-lg shrink-0">
               {getInitials(emp.name)}
             </div>
-            <div className="space-y-1">
-              <div className="flex items-center gap-3">
-                <h2 className="font-display font-bold text-xl text-slate-800 tracking-tight m-0">{emp.name}</h2>
-                <Badge status={emp.status} />
+
+            <div className="space-y-0.5">
+              <div className="flex items-center gap-2">
+                <h1 className="text-lg font-bold text-slate-900">{emp.name}</h1>
+                <span className="px-2 py-0.5 text-[10px] font-semibold rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  {emp.status}
+                </span>
               </div>
-              <p className="text-xs text-slate-400 font-semibold">{emp.role}</p>
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-slate-400 text-xs font-semibold mt-1">
-                <span className="flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5" /> {emp.location}</span>
-                <span className="flex items-center gap-1.5"><Briefcase className="w-3.5 h-3.5" /> {emp.department} Team</span>
-                <span className="flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5" /> Joined {emp.joinDate}</span>
+
+              <p className="text-xs font-semibold text-slate-700">{emp.role} • <span className="text-slate-500 font-normal">{emp.department}</span></p>
+
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-slate-500 text-[11px] font-medium pt-0.5">
+                <span className="flex items-center gap-1"><MapPin className="w-3 h-3 text-slate-400" /> {emp.location}</span>
+                <span className="flex items-center gap-1"><Briefcase className="w-3 h-3 text-slate-400" /> {emp.employmentType || 'Full-Time Permanent'}</span>
+                <span className="flex items-center gap-1"><Calendar className="w-3 h-3 text-slate-400" /> Joined {emp.joinDate}</span>
               </div>
             </div>
           </div>
-          <div className="flex gap-2">
-            {isEditing ? (
-              <>
-                <Button variant="ghost" size="sm" onClick={() => setIsEditing(false)}>Cancel</Button>
-                <Button variant="primary" size="sm" onClick={handleSaveProfile}>Save Changes</Button>
-              </>
-            ) : (
-              <Button variant="secondary" size="sm" onClick={() => setIsEditing(true)}>Edit Profile</Button>
-            )}
+
+          <div className="p-2.5 bg-slate-50 rounded border border-slate-200 text-xs self-start sm:self-auto">
+            <span className="text-[10px] text-slate-400 font-bold uppercase block">Employee ID</span>
+            <span className="font-mono font-bold text-slate-900">{emp.id}</span>
           </div>
         </div>
 
-        {/* Tab Headers */}
-        <div className="flex border-t border-slate-100 mt-6 -mx-6 -mb-6 px-6 overflow-x-auto whitespace-nowrap scrollbar-none">
+        {/* Tabs */}
+        <div className="flex border-t border-slate-100 -mx-4 -mb-4 px-4 overflow-x-auto text-xs">
           {tabs.map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`py-3.5 px-4 text-xs font-bold border-b-2 cursor-pointer transition-all duration-200 ${
-                activeTab === tab.id 
-                  ? 'border-brand-600 text-brand-700 font-extrabold' 
-                  : 'border-transparent text-slate-400 hover:text-slate-600'
-              }`}
+              className={`py-2.5 px-3 font-medium border-b-2 cursor-pointer transition-colors whitespace-nowrap ${activeTab === tab.id
+                  ? 'border-slate-900 text-slate-900 font-bold'
+                  : 'border-transparent text-slate-500 hover:text-slate-900'
+                }`}
             >
               {tab.name}
             </button>
           ))}
         </div>
-      </Card>
+      </div>
 
-      {/* Tab Panels */}
+      {/* Content Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        {/* Main Details Panel (Left Columns) */}
+
         <div className="lg:col-span-2 space-y-6">
           {activeTab === 'overview' && (
-            <Card title="Professional Profile" subtitle="Basic employee records and organizational info.">
-              {isEditing ? (
-                <div className="space-y-4 pt-2">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <Input label="Full Name" name="name" value={editForm.name} onChange={handleEditChange} />
-                    <Input label="Job Title" name="role" value={editForm.role} onChange={handleEditChange} />
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <Input label="Email" name="email" value={editForm.email} onChange={handleEditChange} />
-                    <Input label="Phone" name="phone" value={editForm.phone} onChange={handleEditChange} />
-                  </div>
-                  <Input label="Location" name="location" value={editForm.location} onChange={handleEditChange} />
-                  <Input type="textarea" label="Professional Biography" name="bio" value={editForm.bio} onChange={handleEditChange} rows={4} />
-                </div>
-              ) : (
-                <div className="space-y-6 pt-2">
-                  <div className="space-y-2">
-                    <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Biography</h4>
-                    <p className="text-sm text-slate-600 leading-relaxed font-medium">
-                      {emp.bio || "No professional biography has been provided for this employee."}
-                    </p>
-                  </div>
+            <div className="bg-white border border-slate-200 rounded p-4 shadow-xs space-y-4">
+              <h3 className="text-xs font-bold text-slate-900 pb-2 border-b border-slate-100">Employee Details Specs</h3>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 border-t border-slate-50 pt-6">
-                    <div>
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Email Address</span>
-                      <a href={`mailto:${emp.email}`} className="text-xs font-semibold text-brand-600 hover:underline flex items-center gap-1.5">
-                        <Mail className="w-3.5 h-3.5" /> {emp.email}
-                      </a>
-                    </div>
-                    <div>
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Phone Number</span>
-                      <span className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
-                        <Phone className="w-3.5 h-3.5 text-slate-400" /> {emp.phone}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Reporting Line</span>
-                      <span className="text-xs font-semibold text-slate-700">
-                        Reports to <span className="text-brand-700">{emp.manager}</span>
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Corporate ID</span>
-                      <span className="text-xs font-bold text-slate-700 font-mono">
-                        {emp.id}
-                      </span>
-                    </div>
-                  </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-3 bg-slate-50 border border-slate-200 rounded text-xs">
+                <div>
+                  <span className="text-[10px] text-slate-400 font-bold uppercase block">Full Name</span>
+                  <span className="font-semibold text-slate-900 mt-0.5 block">{emp.name}</span>
                 </div>
-              )}
-            </Card>
+                <div>
+                  <span className="text-[10px] text-slate-400 font-bold uppercase block">Employee ID</span>
+                  <span className="font-mono font-semibold text-slate-900 mt-0.5 block">{emp.id}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-slate-400 font-bold uppercase block">Corporate Email</span>
+                  <a href={`mailto:${emp.email}`} className="font-semibold text-slate-900 hover:underline mt-0.5 block">{emp.email}</a>
+                </div>
+                <div>
+                  <span className="text-[10px] text-slate-400 font-bold uppercase block">Contact Phone</span>
+                  <span className="font-semibold text-slate-900 mt-0.5 block">{emp.phone}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-slate-400 font-bold uppercase block">Department</span>
+                  <span className="font-semibold text-slate-900 mt-0.5 block">{emp.department}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-slate-400 font-bold uppercase block">Designation</span>
+                  <span className="font-semibold text-slate-900 mt-0.5 block">{emp.role}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-slate-400 font-bold uppercase block">Reporting Manager</span>
+                  <span className="font-semibold text-slate-900 mt-0.5 block">{emp.manager || 'Sarah Connor'}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-slate-400 font-bold uppercase block">Joining Date</span>
+                  <span className="font-semibold text-slate-900 mt-0.5 block">{emp.joinDate}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-slate-400 font-bold uppercase block">Employment Type</span>
+                  <span className="font-semibold text-slate-900 mt-0.5 block">{emp.employmentType || 'Full-Time Permanent'}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-slate-400 font-bold uppercase block">Status</span>
+                  <span className="font-semibold text-emerald-700 mt-0.5 block">{emp.status}</span>
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <span className="font-bold text-slate-700 uppercase text-[10px]">Biography</span>
+                <p className="p-3 bg-slate-50 border border-slate-200 rounded text-xs text-slate-700 leading-relaxed">
+                  {emp.bio || "No professional biography provided."}
+                </p>
+              </div>
+            </div>
           )}
 
           {activeTab === 'skills' && (
-            <Card title="Skills Matrix & Active Deliverables" subtitle="Registered competencies and client projects.">
-              <div className="space-y-6 pt-2">
-                <div className="space-y-3">
-                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Expertise & Skills</h4>
-                  <div className="flex flex-wrap gap-2">
-                    {emp.skills && emp.skills.map((skill, index) => (
-                      <span key={index} className="bg-slate-100 border border-slate-200/50 text-slate-600 px-3 py-1 rounded-lg text-xs font-semibold">
-                        {skill}
-                      </span>
-                    ))}
-                  </div>
-                </div>
+            <div className="bg-white border border-slate-200 rounded p-4 shadow-xs space-y-4">
+              <h3 className="text-xs font-bold text-slate-900 pb-2 border-b border-slate-100">Skills & Assigned Projects</h3>
 
-                <div className="space-y-3 border-t border-slate-50 pt-6">
-                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Assigned Projects</h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {emp.projects && emp.projects.map((project, idx) => (
-                      <div key={idx} className="border border-slate-100 p-4 rounded-xl bg-slate-50/30">
-                        <h5 className="text-xs font-bold text-slate-800">{project}</h5>
-                        <p className="text-[10px] text-slate-400 mt-1">Status: Active Development</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </Card>
-          )}
-
-          {activeTab === 'time-off' && (
-            <Card 
-              title="Time Off & Absence Log" 
-              subtitle="Registered leave history and request status trackers."
-              headerAction={
-                <Button 
-                  variant="primary" 
-                  size="sm" 
-                  leftIcon={<PlusCircle className="w-4 h-4" />}
-                  onClick={() => setIsLeaveModalOpen(true)}
-                >
-                  Request Leave
-                </Button>
-              }
-            >
-              <div className="pt-2">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse">
-                    <thead>
-                      <tr className="border-b border-slate-100 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                        <th className="pb-3">Type</th>
-                        <th className="pb-3">Duration</th>
-                        <th className="pb-3">Status</th>
-                        <th className="pb-3">Notes</th>
-                        <th className="pb-3 text-right">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-50 text-xs">
-                      {emp.timeOffRequests && emp.timeOffRequests.map((req) => (
-                        <tr key={req.id}>
-                          <td className="py-4 font-bold text-slate-700">{req.type}</td>
-                          <td className="py-4 font-semibold text-slate-500">{req.startDate} to {req.endDate}</td>
-                          <td className="py-4"><Badge status={req.status} /></td>
-                          <td className="py-4 text-slate-400 font-medium max-w-xs truncate" title={req.notes}>{req.notes}</td>
-                          <td className="py-4 text-right">
-                            {req.status === 'Pending' ? (
-                              <div className="flex gap-1.5 justify-end">
-                                <Button 
-                                  variant="primary" 
-                                  size="sm" 
-                                  className="text-[10px] px-2 py-1! rounded-md"
-                                  onClick={() => updateTimeOffRequestStatus(emp.id, req.id, 'Approved')}
-                                >
-                                  Approve
-                                </Button>
-                                <Button 
-                                  variant="danger" 
-                                  size="sm" 
-                                  className="text-[10px] px-2 py-1! rounded-md"
-                                  onClick={() => updateTimeOffRequestStatus(emp.id, req.id, 'Rejected')}
-                                >
-                                  Reject
-                                </Button>
-                              </div>
-                            ) : (
-                              <span className="text-[10px] text-slate-400 font-bold uppercase">{req.status}</span>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                      {(!emp.timeOffRequests || emp.timeOffRequests.length === 0) && (
-                        <tr>
-                          <td colSpan="5" className="py-8 text-center text-slate-400 font-medium">
-                            No leave requests filed yet.
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </Card>
-          )}
-
-          {activeTab === 'documents' && (
-            <Card title="Onboarding Documents Checklist" subtitle="Required employee documentation signing and status tracking.">
-              <div className="space-y-4 pt-2">
-                {emp.documents && emp.documents.map((doc) => (
-                  <div 
-                    key={doc.id}
-                    className={`flex items-center justify-between p-4 rounded-xl border transition-all ${
-                      doc.status === 'Signed' 
-                        ? 'bg-emerald-50/20 border-emerald-100 text-slate-800' 
-                        : 'bg-amber-50/20 border-amber-100 text-slate-800'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      {doc.status === 'Signed' ? (
-                        <CheckCircle className="w-5 h-5 text-emerald-600 shrink-0" />
-                      ) : (
-                        <ShieldAlert className="w-5 h-5 text-amber-600 shrink-0" />
-                      )}
-                      <div>
-                        <h5 className="text-xs font-bold text-slate-700">{doc.name}</h5>
-                        <p className="text-[10px] text-slate-400 mt-0.5">
-                          {doc.status === 'Signed' ? `Signed on ${doc.signedDate}` : 'Action required (Pending Signature)'}
-                        </p>
-                      </div>
-                    </div>
-                    <div>
-                      {doc.status === 'Pending' ? (
-                        <Button 
-                          variant="accent" 
-                          size="sm"
-                          leftIcon={<FileSignature className="w-3.5 h-3.5" />}
-                          onClick={() => signDocument(emp.id, doc.id)}
-                        >
-                          Sign Document
-                        </Button>
-                      ) : (
-                        <Badge status="Signed" />
-                      )}
-                    </div>
-                  </div>
-                ))}
-                {(!emp.documents || emp.documents.length === 0) && (
-                  <p className="text-center py-8 text-slate-400 font-medium">No files registered for this account.</p>
-                )}
-              </div>
-            </Card>
-          )}
-        </div>
-
-        {/* Info stats (Right Column) */}
-        <div className="lg:col-span-1 space-y-6">
-          <Card title="Metrics Overview">
-            <div className="space-y-6 pt-2">
-              <div className="space-y-1">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Operational Attendance</span>
-                <div className="flex items-baseline gap-2">
-                  <span className="font-display font-bold text-2xl text-slate-800">{emp.attendance}%</span>
-                  <span className="text-[10px] font-bold text-emerald-600">Within target</span>
-                </div>
-                <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden mt-2">
-                  <div style={{ width: `${emp.attendance}%` }} className="bg-brand-500 h-full rounded-full" />
-                </div>
-              </div>
-
-              <div className="space-y-1 border-t border-slate-50 pt-4">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Performance Score</span>
-                <div className="flex items-baseline gap-2">
-                  <span className="font-display font-bold text-2xl text-slate-800">{emp.performance} <span className="text-sm font-semibold text-slate-400">/ 5.0</span></span>
-                  <span className="text-[10px] font-bold text-brand-600">Top Quartile</span>
-                </div>
-                <div className="flex gap-1.5 mt-2">
-                  {[1, 2, 3, 4, 5].map((s) => (
-                    <span 
-                      key={s} 
-                      className={`h-2 flex-grow rounded-sm ${
-                        s <= Math.floor(emp.performance) ? 'bg-indigo-500' : 'bg-slate-100'
-                      }`} 
-                    />
+              <div className="space-y-2">
+                <span className="font-bold text-slate-700 uppercase text-[10px]">Core Competencies</span>
+                <div className="flex flex-wrap gap-1.5">
+                  {emp.skills?.map((skill, idx) => (
+                    <span key={idx} className="bg-slate-100 text-slate-800 font-semibold text-xs px-2.5 py-1 rounded border border-slate-200">
+                      {skill}
+                    </span>
                   ))}
                 </div>
               </div>
 
-              <div className="space-y-2 border-t border-slate-50 pt-4">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Quick Actions</span>
-                <div className="grid grid-cols-1 gap-2">
-                  <Button variant="ghost" size="sm" className="w-full justify-start text-xs border border-slate-200/50 hover:bg-slate-50" onClick={() => { setActiveTab('time-off'); setIsLeaveModalOpen(true); }}>
-                    Record Leave Request
-                  </Button>
-                  {emp.status === 'Onboarding' && (
-                    <Button variant="ghost" size="sm" className="w-full justify-start text-xs border border-slate-200/50 hover:bg-slate-50" onClick={() => setActiveTab('documents')}>
-                      View Onboarding Files
-                    </Button>
-                  )}
+              <div className="space-y-2 pt-3 border-t border-slate-100">
+                <span className="font-bold text-slate-700 uppercase text-[10px]">Assigned Projects</span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {emp.projects?.map((proj, idx) => (
+                    <div key={idx} className="p-3 bg-slate-50 rounded border border-slate-200">
+                      <span className="font-bold text-slate-900 text-xs block">{proj}</span>
+                      <span className="text-[10px] text-slate-400">Engineering Pod</span>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
-          </Card>
+          )}
+
+          {activeTab === 'time-off' && (
+            <div className="bg-white border border-slate-200 rounded p-4 shadow-xs space-y-3">
+              <h3 className="text-xs font-bold text-slate-900 pb-2 border-b border-slate-100">Time Off Logs</h3>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-semibold text-[11px] uppercase">
+                      <th className="py-2.5 px-3">Type</th>
+                      <th className="py-2.5 px-3">Dates</th>
+                      <th className="py-2.5 px-3">Notes</th>
+                      <th className="py-2.5 px-3 text-right">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {emp.timeOffRequests?.map((req) => (
+                      <tr key={req.id}>
+                        <td className="py-2.5 px-3 font-semibold text-slate-900">{req.type}</td>
+                        <td className="py-2.5 px-3 text-slate-600">{req.startDate} to {req.endDate}</td>
+                        <td className="py-2.5 px-3 text-slate-500 max-w-xs truncate">{req.notes}</td>
+                        <td className="py-2.5 px-3 text-right">
+                          <span className="px-2 py-0.5 text-[10px] font-semibold rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            {req.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                    {(!emp.timeOffRequests || emp.timeOffRequests.length === 0) && (
+                      <tr>
+                        <td colSpan="4" className="py-6 text-center text-slate-400 font-medium">
+                          No leave requests recorded.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'documents' && (
+            <div className="bg-white border border-slate-200 rounded p-4 shadow-xs space-y-3">
+              <h3 className="text-xs font-bold text-slate-900 pb-2 border-b border-slate-100">Compliance Documents</h3>
+              <div className="space-y-2">
+                {emp.documents?.map((doc) => (
+                  <div key={doc.id} className="p-3 bg-slate-50 rounded border border-slate-200 flex items-center justify-between text-xs">
+                    <div>
+                      <span className="font-semibold text-slate-900 block">{doc.name}</span>
+                      <span className="text-[10px] text-slate-400">Status: {doc.status}</span>
+                    </div>
+                    {doc.status === 'Pending' ? (
+                      <button
+                        onClick={() => signDocument(emp.id, doc.id)}
+                        className="px-2.5 py-1 bg-brand-600 text-white font-bold rounded text-xs"
+                      >
+                        Sign Document
+                      </button>
+                    ) : (
+                      <span className="px-2 py-0.5 text-emerald-700 bg-emerald-50 border border-emerald-200 rounded font-bold text-[10px]">
+                        Signed
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Stats Column */}
+        <div className="space-y-4">
+          <div className="bg-white border border-slate-200 rounded p-4 shadow-xs space-y-4">
+            <h3 className="text-xs font-bold text-slate-900 pb-2 border-b border-slate-100">Metrics Snapshot</h3>
+
+            <div className="space-y-1">
+              <div className="flex justify-between text-xs font-semibold">
+                <span className="text-slate-500">Attendance Rate</span>
+                <span className="text-slate-900 font-bold">{emp.attendance}%</span>
+              </div>
+              <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                <div style={{ width: `${emp.attendance}%` }} className="bg-slate-800 h-1.5 rounded-full" />
+              </div>
+            </div>
+
+            <div className="space-y-1 pt-3 border-t border-slate-100">
+              <div className="flex justify-between text-xs font-semibold">
+                <span className="text-slate-500">Performance Rating</span>
+                <span className="text-emerald-700 font-bold">{emp.performance} / 5.0</span>
+              </div>
+              <div className="flex gap-1">
+                {[1, 2, 3, 4, 5].map((s) => (
+                  <div key={s} className={`h-1.5 flex-1 rounded-full ${s <= Math.floor(emp.performance) ? 'bg-emerald-600' : 'bg-slate-200'}`} />
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
 
       </div>
 
-      {/* Leave Request Modal */}
-      <Modal
-        isOpen={isLeaveModalOpen}
-        onClose={() => setIsLeaveModalOpen(false)}
-        title="Record Leave Absence Request"
-        footerActions={
-          <div className="flex gap-2">
-            <Button variant="ghost" size="sm" onClick={() => setIsLeaveModalOpen(false)}>Cancel</Button>
-            <Button variant="primary" size="sm" onClick={handleLeaveSubmit}>Submit Request</Button>
+      {/* EDIT MODAL */}
+      {isEditingModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs">
+          <div className="bg-white border border-slate-200 rounded-xl shadow-xl w-full max-w-md overflow-hidden text-xs">
+            <div className="p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+              <h3 className="font-bold text-slate-900 text-sm">Edit Profile</h3>
+              <button onClick={() => setIsEditingModalOpen(false)} className="text-slate-400 hover:text-slate-600 p-1 rounded">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveProfile} className="p-4 space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="font-bold text-slate-700 uppercase text-[10px]">Full Name</label>
+                  <input
+                    type="text"
+                    value={profileForm.name}
+                    onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })}
+                    className="w-full p-2 border border-slate-200 rounded text-slate-800"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="font-bold text-slate-700 uppercase text-[10px]">Designation</label>
+                  <input
+                    type="text"
+                    value={profileForm.role}
+                    onChange={(e) => setProfileForm({ ...profileForm, role: e.target.value })}
+                    className="w-full p-2 border border-slate-200 rounded text-slate-800"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="font-bold text-slate-700 uppercase text-[10px]">Department</label>
+                  <input
+                    type="text"
+                    value={profileForm.department}
+                    onChange={(e) => setProfileForm({ ...profileForm, department: e.target.value })}
+                    className="w-full p-2 border border-slate-200 rounded text-slate-800"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="font-bold text-slate-700 uppercase text-[10px]">Manager</label>
+                  <input
+                    type="text"
+                    value={profileForm.manager}
+                    onChange={(e) => setProfileForm({ ...profileForm, manager: e.target.value })}
+                    className="w-full p-2 border border-slate-200 rounded text-slate-800"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="font-bold text-slate-700 uppercase text-[10px]">Email</label>
+                  <input
+                    type="email"
+                    value={profileForm.email}
+                    onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })}
+                    className="w-full p-2 border border-slate-200 rounded text-slate-800"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="font-bold text-slate-700 uppercase text-[10px]">Phone</label>
+                  <input
+                    type="text"
+                    value={profileForm.phone}
+                    onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
+                    className="w-full p-2 border border-slate-200 rounded text-slate-800"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-bold text-slate-700 uppercase text-[10px]">Biography</label>
+                <textarea
+                  rows="3"
+                  value={profileForm.bio}
+                  onChange={(e) => setProfileForm({ ...profileForm, bio: e.target.value })}
+                  className="w-full p-2 border border-slate-200 rounded text-slate-800"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setIsEditingModalOpen(false)}
+                  className="px-3 py-1.5 font-semibold text-slate-600 hover:bg-slate-100 rounded"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-1.5 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded"
+                >
+                  Save Changes
+                </button>
+              </div>
+            </form>
           </div>
-        }
-      >
-        <form onSubmit={handleLeaveSubmit} className="space-y-4">
-          <Input 
-            label="Absence Type" 
-            name="type" 
-            type="select" 
-            value={leaveForm.type}
-            onChange={(e) => setLeaveForm(prev => ({ ...prev, type: e.target.value }))}
-            options={[
-              { value: 'Vacation', label: 'Vacation' },
-              { value: 'Sick Leave', label: 'Sick Leave' },
-              { value: 'Medical Leave', label: 'Medical Leave' },
-              { value: 'Compensatory Off', label: 'Compensatory Off' }
-            ]}
-          />
-          <div className="grid grid-cols-2 gap-4">
-            <Input 
-              label="Start Date" 
-              type="date" 
-              value={leaveForm.startDate}
-              onChange={(e) => setLeaveForm(prev => ({ ...prev, startDate: e.target.value }))}
-              required
-            />
-            <Input 
-              label="End Date" 
-              type="date" 
-              value={leaveForm.endDate}
-              onChange={(e) => setLeaveForm(prev => ({ ...prev, endDate: e.target.value }))}
-              required
-            />
-          </div>
-          <Input 
-            label="Administrative Notes" 
-            type="textarea" 
-            placeholder="Additional context or description..."
-            value={leaveForm.notes}
-            onChange={(e) => setLeaveForm(prev => ({ ...prev, notes: e.target.value }))}
-            rows={2}
-          />
-        </form>
-      </Modal>
+        </div>
+      )}
     </div>
   );
-};
-
-export default EmployeeProfile;
+}

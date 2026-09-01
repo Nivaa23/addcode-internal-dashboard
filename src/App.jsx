@@ -6,6 +6,11 @@ import Dashboard from './pages/Dashboard';
 import Login from './pages/Login';
 import EmployeeProfile from './pages/EmployeeProfile';
 import TimeOff from './pages/TimeOff';
+import Tasks from './pages/Tasks';
+import Projects from './pages/Projects';
+import Attendance from './pages/Attendance';
+import Leaves from './pages/Leaves';
+import CalendarPage from './pages/CalendarPage';
 import PlaceholderPage from './pages/PlaceholderPage';
 
 const ProtectedRoute = ({ children }) => {
@@ -23,56 +28,21 @@ function AppRoutes() {
     <Routes>
       {/* Anonymous route */}
       <Route path="/login" element={<AnonymousRoute><Login /></AnonymousRoute>} />
-      
+
       {/* Protected routes */}
       <Route path="/" element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
         <Route index element={<Navigate to="/dashboard" replace />} />
         <Route path="dashboard" element={<Dashboard />} />
-        
-        <Route 
-          path="tasks" 
-          element={
-            <PlaceholderPage 
-              title="My Tasks" 
-              description="Monitor your daily scrum tickets, engineering pull request reviews, and administrative action items." 
-            />
-          } 
-        />
-        <Route 
-          path="projects" 
-          element={
-            <PlaceholderPage 
-              title="Projects" 
-              description="Explore client deliveries, active codebases, and engineering team resource allocations." 
-            />
-          } 
-        />
-        <Route 
-          path="attendance" 
-          element={
-            <PlaceholderPage 
-              title="Attendance" 
-              description="Inspect corporate login history, billing allocations, and operational remote metrics." 
-            />
-          } 
-        />
-        
-        {/* Leaves redirects to the interactive leave scheduling/request logs */}
-        <Route path="leaves" element={<TimeOff />} />
-        
-        <Route 
-          path="calendar" 
-          element={
-            <PlaceholderPage 
-              title="Calendar" 
-              description="Track sprint meetings, client demos, team availability, and company holidays." 
-            />
-          } 
-        />
-        
+
+        <Route path="tasks" element={<Tasks />} />
+        <Route path="projects" element={<Projects />} />
+        <Route path="attendance" element={<Attendance />} />
+        <Route path="leaves" element={<Leaves />} />
+        <Route path="calendar" element={<CalendarPage />} />
+
         {/* Profile page defaults to loading the currentUser profile */}
         <Route path="profile" element={<EmployeeProfile />} />
-        
+
         {/* Fallback route */}
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Route>

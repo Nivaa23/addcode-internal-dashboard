@@ -14,8 +14,8 @@ const AppLayout = () => {
         {/* Header Bar */}
         <Header />
 
-        {/* Scrollable Page Outlet */}
-        <main className="flex-grow p-8 overflow-y-auto max-w-7xl w-full mx-auto">
+        {/* Scrollable Page Outlet - Wide balanced container */}
+        <main className="flex-grow px-6 py-6 lg:px-10 lg:py-8 overflow-y-auto max-w-[1720px] w-full mx-auto">
           {/* Outlet for children routes */}
           <Outlet />
         </main>

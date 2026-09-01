@@ -1,13 +1,97 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import { mockEmployees as initialEmployees, mockActivities as initialActivities, mockStats as initialStats } from '../data/mockEmployees';
 
 const EmployeeContext = createContext();
+
+export const accentPalettes = {
+  blue: {
+    name: 'Addcode Blue',
+    hex: '#0284c7',
+    600: '#0284c7',
+    700: '#0369a1',
+    50: '#f0f9ff',
+    100: '#e0f2fe',
+    200: '#bae6fd'
+  },
+  neutral: {
+    name: 'Neutral Dark',
+    hex: '#18181b',
+    600: '#18181b',
+    700: '#09090b',
+    50: '#f4f4f5',
+    100: '#e4e4e7',
+    200: '#d4d4d8'
+  },
+  red: {
+    name: 'Addcode Red',
+    hex: '#dc2626',
+    600: '#dc2626',
+    700: '#b91c1c',
+    50: '#fef2f2',
+    100: '#fee2e2',
+    200: '#fecaca'
+  },
+  green: {
+    name: 'Emerald Green',
+    hex: '#16a34a',
+    600: '#16a34a',
+    700: '#15803d',
+    50: '#f0fdf4',
+    100: '#dcfce7',
+    200: '#bbf7d0'
+  },
+  orange: {
+    name: 'Solar Orange',
+    hex: '#ea580c',
+    600: '#ea580c',
+    700: '#c2410c',
+    50: '#fff7ed',
+    100: '#ffedd5',
+    200: '#fed7aa'
+  },
+  violet: {
+    name: 'Royal Violet',
+    hex: '#7c3aed',
+    600: '#7c3aed',
+    700: '#6d28d9',
+    50: '#f5f3ff',
+    100: '#ede9fe',
+    200: '#ddd6fe'
+  }
+};
 
 export const EmployeeProvider = ({ children }) => {
   const [employees, setEmployees] = useState(initialEmployees);
   const [activities, setActivities] = useState(initialActivities);
   const [stats, setStats] = useState(initialStats);
-  
+
+  // Accent Theme State (Default: Addcode Blue)
+  const [accentTheme, setAccentThemeState] = useState(() => {
+    return localStorage.getItem('addcode_accent') || 'blue';
+  });
+
+  const applyAccentTheme = (themeKey) => {
+    const palette = accentPalettes[themeKey] || accentPalettes.blue;
+    const root = document.documentElement;
+    root.style.setProperty('--color-brand-600', palette[600]);
+    root.style.setProperty('--color-brand-700', palette[700]);
+    root.style.setProperty('--color-brand-50', palette[50]);
+    root.style.setProperty('--color-brand-100', palette[100]);
+    root.style.setProperty('--color-brand-200', palette[200]);
+  };
+
+  useEffect(() => {
+    applyAccentTheme(accentTheme);
+  }, [accentTheme]);
+
+  const setAccentTheme = (themeKey) => {
+    if (accentPalettes[themeKey]) {
+      setAccentThemeState(themeKey);
+      localStorage.setItem('addcode_accent', themeKey);
+      applyAccentTheme(themeKey);
+    }
+  };
+
   // Mock Auth State
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
     return localStorage.getItem('addcode_auth') === 'true';
@@ -32,7 +116,6 @@ export const EmployeeProvider = ({ children }) => {
     localStorage.removeItem('addcode_auth');
   };
 
-  // Add new employee
   const addEmployee = (employeeData) => {
     const newEmp = {
       id: `EMP-2026-${Math.floor(100 + Math.random() * 900)}`,
@@ -50,7 +133,6 @@ export const EmployeeProvider = ({ children }) => {
 
     setEmployees(prev => [newEmp, ...prev]);
 
-    // Add activity
     const newActivity = {
       id: `act-${Date.now()}`,
       type: "onboarding",
@@ -59,23 +141,18 @@ export const EmployeeProvider = ({ children }) => {
       user: newEmp.name
     };
     setActivities(prev => [newActivity, ...prev]);
-
-    // Recalculate stats
     updateStats([newEmp, ...employees]);
   };
 
-  // Update employee
   const updateEmployee = (id, updatedFields) => {
     setEmployees(prev => prev.map(emp => {
       if (emp.id === id) {
-        const updated = { ...emp, ...updatedFields };
-        return updated;
+        return { ...emp, ...updatedFields };
       }
       return emp;
     }));
   };
 
-  // Delete/Terminate employee
   const terminateEmployee = (id) => {
     const employeeToDelete = employees.find(emp => emp.id === id);
     if (!employeeToDelete) return;
@@ -90,11 +167,9 @@ export const EmployeeProvider = ({ children }) => {
       user: employeeToDelete.name
     };
     setActivities(prev => [newActivity, ...prev]);
-
     updateStats(employees.filter(emp => emp.id !== id));
   };
 
-  // Approve or reject time off request
   const updateTimeOffRequestStatus = (employeeId, requestId, status) => {
     setEmployees(prev => prev.map(emp => {
       if (emp.id === employeeId) {
@@ -111,7 +186,6 @@ export const EmployeeProvider = ({ children }) => {
       return emp;
     }));
 
-    // Add activity
     const emp = employees.find(e => e.id === employeeId);
     const req = emp?.timeOffRequests.find(r => r.id === requestId);
     if (emp && req) {
@@ -126,7 +200,6 @@ export const EmployeeProvider = ({ children }) => {
     }
   };
 
-  // Request new time off
   const requestTimeOff = (employeeId, type, startDate, endDate, notes) => {
     const newRequest = {
       id: `req-${Date.now()}`,
@@ -160,7 +233,6 @@ export const EmployeeProvider = ({ children }) => {
     }
   };
 
-  // Sign document for onboarding
   const signDocument = (employeeId, documentId) => {
     const today = new Date().toISOString().split('T')[0];
     setEmployees(prev => prev.map(emp => {
@@ -192,23 +264,19 @@ export const EmployeeProvider = ({ children }) => {
     }
   };
 
-  // Helper to sync stats when employees change
   const updateStats = (updatedEmployees) => {
-    const total = updatedEmployees.length + 39; // offset to match high-fidelity total stats (e.g. 48)
+    const total = updatedEmployees.length + 39;
     const active = updatedEmployees.filter(e => e.status === "Active").length;
     const onboarding = updatedEmployees.filter(e => e.status === "Onboarding").length;
-    
-    // Average performance
+
     const withPerformance = updatedEmployees.filter(e => e.performance > 0);
     const avgPerf = withPerformance.length > 0
       ? (withPerformance.reduce((acc, curr) => acc + curr.performance, 0) / withPerformance.length).toFixed(1)
       : 4.5;
 
-    // Department breakdown
     const depts = ["Engineering", "Design", "Product", "HR", "Marketing"];
     const breakdown = depts.map(deptName => {
       const count = updatedEmployees.filter(e => e.department === deptName || (deptName === "HR" && e.department === "HR")).length;
-      // add standard padding so dashboard looks realistic and populated
       const pad = deptName === "Engineering" ? 18 : deptName === "Design" ? 7 : deptName === "Product" ? 4 : deptName === "HR" ? 3 : 2;
       const actualCount = count + pad;
       return {
@@ -216,9 +284,9 @@ export const EmployeeProvider = ({ children }) => {
         count: actualCount,
         percentage: Math.round((actualCount / total) * 100),
         color: deptName === "Engineering" ? "bg-indigo-500 text-indigo-500" :
-               deptName === "Design" ? "bg-purple-500 text-purple-500" :
-               deptName === "Product" ? "bg-pink-500 text-pink-500" :
-               deptName === "HR" ? "bg-emerald-500 text-emerald-500" : "bg-amber-500 text-amber-500"
+          deptName === "Design" ? "bg-purple-500 text-purple-500" :
+            deptName === "Product" ? "bg-pink-500 text-pink-500" :
+              deptName === "HR" ? "bg-emerald-500 text-emerald-500" : "bg-amber-500 text-amber-500"
       };
     });
 
@@ -236,6 +304,8 @@ export const EmployeeProvider = ({ children }) => {
       employees,
       activities,
       stats,
+      accentTheme,
+      setAccentTheme,
       addEmployee,
       updateEmployee,
       terminateEmployee,
