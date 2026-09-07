@@ -7,9 +7,9 @@ import {
 import { useEmployees } from '../context/EmployeeContext';
 
 export default function Leaves() {
-  const { currentUser } = useEmployees();
 
-  const [leaveBalances, setLeaveBalances] = useState({
+
+  const [leaveBalances] = useState({
     casual: { allocated: 10, used: 3, remaining: 7 },
     sick: { allocated: 8, used: 1, remaining: 7 },
     earned: { allocated: 6, used: 2, remaining: 4 },

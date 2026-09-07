@@ -10,7 +10,7 @@ import {
 import { useEmployees } from '../context/EmployeeContext';
 
 export default function Dashboard() {
-  const { currentUser, activities } = useEmployees();
+  const { activities } = useEmployees();
 
   // 1. Mock local state for Today's Check-in & Live Timer
   const [isLoggedIn, setIsLoggedIn] = useState(true);

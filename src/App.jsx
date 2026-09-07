@@ -4,6 +4,7 @@ import { EmployeeProvider, useEmployees } from './context/EmployeeContext';
 import AppLayout from './components/layout/AppLayout';
 import Dashboard from './pages/Dashboard';
 import Login from './pages/Login';
+import SignUp from './pages/SignUp';
 import EmployeeProfile from './pages/EmployeeProfile';
 import TimeOff from './pages/TimeOff';
 import Tasks from './pages/Tasks';
@@ -26,8 +27,9 @@ const AnonymousRoute = ({ children }) => {
 function AppRoutes() {
   return (
     <Routes>
-      {/* Anonymous route */}
+      {/* Anonymous authentication routes */}
       <Route path="/login" element={<AnonymousRoute><Login /></AnonymousRoute>} />
+      <Route path="/signup" element={<AnonymousRoute><SignUp /></AnonymousRoute>} />
 
       {/* Protected routes */}
       <Route path="/" element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>

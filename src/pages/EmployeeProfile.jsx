@@ -2,15 +2,11 @@ import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
   ArrowLeft,
-  Mail,
-  Phone,
   MapPin,
   Calendar,
   Briefcase,
-  UserCheck,
   Edit3,
-  X,
-  Building2
+  X
 } from 'lucide-react';
 import { useEmployees } from '../context/EmployeeContext';
 
@@ -42,7 +38,6 @@ export default function EmployeeProfile() {
 
   const [activeTab, setActiveTab] = useState('overview');
   const [isEditingModalOpen, setIsEditingModalOpen] = useState(false);
-  const [isLeaveModalOpen, setIsLeaveModalOpen] = useState(false);
 
   const [profileForm, setProfileForm] = useState({
     name: emp.name || '',
@@ -75,13 +70,6 @@ export default function EmployeeProfile() {
     setIsEditingModalOpen(false);
   };
 
-  const handleLeaveSubmit = (e) => {
-    e.preventDefault();
-    if (!leaveForm.startDate || !leaveForm.endDate) return;
-    requestTimeOff(emp.id, leaveForm.type, leaveForm.startDate, leaveForm.endDate, leaveForm.notes);
-    setLeaveForm({ type: 'Vacation', startDate: '', endDate: '', notes: '' });
-    setIsLeaveModalOpen(false);
-  };
 
   const tabs = [
     { id: 'overview', name: 'Overview & Details' },
