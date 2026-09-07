@@ -141,7 +141,7 @@ export default function AuthBrandSide() {
           </div>
 
           {/* Card 2: Operations & Sprint Telemetry */}
-          <div className="p-3.5 rounded-xl bg-white/4 hover:bg-white/[0.07] border border-white/10 backdrop-blur-md transition-all duration-200 group">
+          <div className="p-3.5 rounded-xl bg-white/4 hover:bg-white/7 border border-white/10 backdrop-blur-md transition-all duration-200 group">
             <div className="flex items-center gap-3">
               <div 
                 className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors"
