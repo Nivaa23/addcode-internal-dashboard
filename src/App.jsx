@@ -39,6 +39,9 @@ const ChangePasswordRoute = ({ children }) => {
 function AppRoutes() {
   return (
     <Routes>
+      {/* Root route requirement */}
+      <Route path="/" element={<Navigate to="/login" replace />} />
+
       {/* Anonymous authentication routes */}
       <Route path="/login" element={<AnonymousRoute><Login /></AnonymousRoute>} />
       <Route path="/signup" element={<AnonymousRoute><SignUp /></AnonymousRoute>} />
@@ -47,18 +50,16 @@ function AppRoutes() {
       <Route path="/change-password" element={<ChangePasswordRoute><ChangePassword /></ChangePasswordRoute>} />
 
       {/* Protected routes */}
-      <Route path="/" element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
-        <Route index element={<Navigate to="/dashboard" replace />} />
-        <Route path="dashboard" element={<Dashboard />} />
-
-        <Route path="tasks" element={<Tasks />} />
-        <Route path="projects" element={<Projects />} />
-        <Route path="attendance" element={<Attendance />} />
-        <Route path="leaves" element={<Leaves />} />
-        <Route path="calendar" element={<CalendarPage />} />
+      <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/tasks" element={<Tasks />} />
+        <Route path="/projects" element={<Projects />} />
+        <Route path="/attendance" element={<Attendance />} />
+        <Route path="/leaves" element={<Leaves />} />
+        <Route path="/calendar" element={<CalendarPage />} />
 
         {/* Profile page defaults to loading the currentUser profile */}
-        <Route path="profile" element={<EmployeeProfile />} />
+        <Route path="/profile" element={<EmployeeProfile />} />
 
         {/* Fallback route */}
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
