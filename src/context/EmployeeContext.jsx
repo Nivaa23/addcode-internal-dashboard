@@ -144,12 +144,25 @@ export const EmployeeProvider = ({ children }) => {
     };
   });
 
-  const login = (email, _password) => {
+  const [mustChangePassword, setMustChangePassword] = useState(() => {
+    return localStorage.getItem('addcode_must_change_password') === 'true';
+  });
+
+  const login = (email, password) => {
     const userToSet = {
       ...currentUser,
       email: email || currentUser.email,
       name: email && email.includes('@') ? email.split('@')[0].split('.').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' ') : currentUser.name
     };
+    
+    // Simulate first-time login logic (e.g. if the password is the temporary one or if no previous state exists)
+    // For this mock, we force password change on the first ever login of this browser session if the flag hasn't been explicitly set to false
+    const hasCompletedChange = localStorage.getItem('addcode_password_changed') === 'true';
+    if (!hasCompletedChange) {
+      setMustChangePassword(true);
+      localStorage.setItem('addcode_must_change_password', 'true');
+    }
+
     setCurrentUser(userToSet);
     setIsAuthenticated(true);
     localStorage.setItem('addcode_auth', 'true');
@@ -174,6 +187,13 @@ export const EmployeeProvider = ({ children }) => {
   const logout = () => {
     setIsAuthenticated(false);
     localStorage.removeItem('addcode_auth');
+  };
+
+  const changePassword = (newPassword) => {
+    // In a real app, you would make an API call here.
+    setMustChangePassword(false);
+    localStorage.setItem('addcode_must_change_password', 'false');
+    localStorage.setItem('addcode_password_changed', 'true');
   };
 
   const addEmployee = (employeeData) => {
@@ -372,10 +392,12 @@ export const EmployeeProvider = ({ children }) => {
       requestTimeOff,
       signDocument,
       isAuthenticated,
+      mustChangePassword,
       currentUser,
       login,
       signup,
-      logout
+      logout,
+      changePassword
     }}>
       {children}
     </EmployeeContext.Provider>

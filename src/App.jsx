@@ -13,15 +13,27 @@ import Attendance from './pages/Attendance';
 import Leaves from './pages/Leaves';
 import CalendarPage from './pages/CalendarPage';
 import PlaceholderPage from './pages/PlaceholderPage';
+import ChangePassword from './pages/ChangePassword';
 
 const ProtectedRoute = ({ children }) => {
-  const { isAuthenticated } = useEmployees();
-  return isAuthenticated ? children : <Navigate to="/login" replace />;
+  const { isAuthenticated, mustChangePassword } = useEmployees();
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (mustChangePassword) return <Navigate to="/change-password" replace />;
+  return children;
 };
 
 const AnonymousRoute = ({ children }) => {
-  const { isAuthenticated } = useEmployees();
-  return !isAuthenticated ? children : <Navigate to="/dashboard" replace />;
+  const { isAuthenticated, mustChangePassword } = useEmployees();
+  if (!isAuthenticated) return children;
+  if (mustChangePassword) return <Navigate to="/change-password" replace />;
+  return <Navigate to="/dashboard" replace />;
+};
+
+const ChangePasswordRoute = ({ children }) => {
+  const { isAuthenticated, mustChangePassword } = useEmployees();
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (!mustChangePassword) return <Navigate to="/dashboard" replace />;
+  return children;
 };
 
 function AppRoutes() {
@@ -30,6 +42,9 @@ function AppRoutes() {
       {/* Anonymous authentication routes */}
       <Route path="/login" element={<AnonymousRoute><Login /></AnonymousRoute>} />
       <Route path="/signup" element={<AnonymousRoute><SignUp /></AnonymousRoute>} />
+
+      {/* Forced Password Change */}
+      <Route path="/change-password" element={<ChangePasswordRoute><ChangePassword /></ChangePasswordRoute>} />
 
       {/* Protected routes */}
       <Route path="/" element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
