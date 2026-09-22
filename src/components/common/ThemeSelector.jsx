@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Palette, Check, ChevronDown } from 'lucide-react';
-import { useEmployees, accentPalettes } from '../../context/EmployeeContext';
+import { useEmployees } from '../../context/EmployeeContext';
+import { accentPalettes } from '../../constants/theme';
 
 export default function ThemeSelector({ 
   variant = 'default', // 'default' | 'pill' | 'header'

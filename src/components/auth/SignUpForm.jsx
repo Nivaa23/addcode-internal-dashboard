@@ -32,7 +32,7 @@ export default function SignUpForm({ onSwitchToLogin, onSignUpSuccess }) {
   const passwordsMatch = confirmPassword.length > 0 && password === confirmPassword;
   const passwordsMismatch = confirmPassword.length > 0 && password !== confirmPassword;
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!name.trim()) {
       setError('Please enter your full name');
@@ -58,10 +58,13 @@ export default function SignUpForm({ onSwitchToLogin, onSignUpSuccess }) {
     setError('');
     setLoading(true);
 
-    setTimeout(() => {
+    try {
+      await onSignUpSuccess({ name, email, password });
+    } catch (err) {
+      setError(err.message || 'Failed to sign up');
+    } finally {
       setLoading(false);
-      onSignUpSuccess({ name, email });
-    }, 550);
+    }
   };
 
   const handleOutlookSignUp = () => {

@@ -6,13 +6,11 @@ import Dashboard from './pages/Dashboard';
 import Login from './pages/Login';
 import SignUp from './pages/SignUp';
 import EmployeeProfile from './pages/EmployeeProfile';
-import TimeOff from './pages/TimeOff';
 import Tasks from './pages/Tasks';
 import Projects from './pages/Projects';
 import Attendance from './pages/Attendance';
 import Leaves from './pages/Leaves';
 import CalendarPage from './pages/CalendarPage';
-import PlaceholderPage from './pages/PlaceholderPage';
 import ChangePassword from './pages/ChangePassword';
 
 const ProtectedRoute = ({ children }) => {

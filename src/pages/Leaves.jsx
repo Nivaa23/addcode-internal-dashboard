@@ -4,7 +4,6 @@ import {
   Upload,
   X
 } from 'lucide-react';
-import { useEmployees } from '../context/EmployeeContext';
 
 export default function Leaves() {
 

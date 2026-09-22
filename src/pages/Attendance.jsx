@@ -1,19 +1,12 @@
 import React, { useState } from 'react';
 import {
-  Clock,
   LogIn,
-  LogOut,
-  Timer,
-  Coffee
+  LogOut
 } from 'lucide-react';
-import { useEmployees } from '../context/EmployeeContext';
 
 export default function Attendance() {
-  const { currentUser } = useEmployees();
 
   const [isCheckedIn, setIsCheckedIn] = useState(true);
-  const [checkInTime, setCheckInTime] = useState('09:18 AM');
-  const [checkOutTime, setCheckOutTime] = useState('Current');
   const [totalWorkHours, setTotalWorkHours] = useState('6h 45m');
 
   const [workSessions, setWorkSessions] = useState([

@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { Mail, Lock, Eye, EyeOff, ArrowRight, Loader2, Sparkles } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, ArrowRight, Loader2 } from 'lucide-react';
 import OutlookIcon from './OutlookIcon';
 import ForgotPasswordModal from './ForgotPasswordModal';
 
 export default function LoginForm({ onSwitchToSignUp, onLoginSuccess }) {
-  const [email, setEmail] = useState('marcus.vance@addcode.engineering');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('••••••••••••');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
@@ -13,7 +13,7 @@ export default function LoginForm({ onSwitchToSignUp, onLoginSuccess }) {
   const [error, setError] = useState('');
   const [forgotPasswordOpen, setForgotPasswordOpen] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!email) {
       setError('Please enter your work email address');
@@ -26,10 +26,13 @@ export default function LoginForm({ onSwitchToSignUp, onLoginSuccess }) {
     setError('');
     setLoading(true);
 
-    setTimeout(() => {
+    try {
+      await onLoginSuccess(email, password);
+    } catch (err) {
+      setError(err.message || 'Failed to login');
+    } finally {
       setLoading(false);
-      onLoginSuccess(email, password);
-    }, 500);
+    }
   };
 
   const handleOutlookLogin = () => {
@@ -37,15 +40,11 @@ export default function LoginForm({ onSwitchToSignUp, onLoginSuccess }) {
     setOutlookLoading(true);
     setTimeout(() => {
       setOutlookLoading(false);
-      onLoginSuccess('marcus.vance@addcode.engineering', 'sso-outlook-token');
+      onLoginSuccess('elena.rostova@addcode.engineering', 'sso-outlook-token');
     }, 600);
   };
 
-  const handleFillDemo = () => {
-    setEmail('marcus.vance@addcode.engineering');
-    setPassword('AddcodeDev#2026');
-    setError('');
-  };
+
 
   return (
     <div className="w-full text-left font-sans">
@@ -139,16 +138,6 @@ export default function LoginForm({ onSwitchToSignUp, onLoginSuccess }) {
             />
             <span className="text-xs text-slate-600 font-medium">Remember me for 30 days</span>
           </label>
-
-          <button
-            type="button"
-            onClick={handleFillDemo}
-            className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-400 hover:text-brand-600 transition-colors cursor-pointer"
-            title="Pre-fill Marcus Vance demo credentials"
-          >
-            <Sparkles className="w-3 h-3" />
-            <span>Demo Fill</span>
-          </button>
         </div>
 
         {/* Submit Button */}

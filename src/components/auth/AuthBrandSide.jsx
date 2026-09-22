@@ -1,7 +1,8 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { ShieldCheck, Cpu, GitPullRequest, Terminal } from 'lucide-react';
-import { useEmployees, accentPalettes } from '../../context/EmployeeContext';
+import { useEmployees } from '../../context/EmployeeContext';
+import { accentPalettes } from '../../constants/theme';
 import logoImg from '../../assets/addcode-logo.png';
 
 export default function AuthBrandSide() {

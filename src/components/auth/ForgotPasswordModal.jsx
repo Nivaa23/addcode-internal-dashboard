@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Mail, ArrowLeft, CheckCircle2, ShieldCheck, X } from 'lucide-react';
+import { supabase } from '../../lib/supabase';
 
 export default function ForgotPasswordModal({ isOpen, onClose, initialEmail = '' }) {
   const [email, setEmail] = useState(initialEmail);
@@ -8,14 +9,17 @@ export default function ForgotPasswordModal({ isOpen, onClose, initialEmail = ''
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!email) return;
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      setIsSubmitted(true);
-    }, 600);
+    
+    await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin + '/change-password',
+    });
+    
+    setLoading(false);
+    setIsSubmitted(true);
   };
 
   const handleClose = () => {

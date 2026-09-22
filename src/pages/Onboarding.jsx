@@ -6,16 +6,11 @@ import {
   FileText, 
   Laptop, 
   CheckSquare, 
-  ArrowRight, 
   UserCheck, 
-  FileSignature,
-  Settings,
-  HelpCircle,
   Square
 } from 'lucide-react';
 import { useEmployees } from '../context/EmployeeContext';
 import Card from '../components/common/Card';
-import Badge from '../components/common/Badge';
 import Button from '../components/common/Button';
 
 const Onboarding = () => {

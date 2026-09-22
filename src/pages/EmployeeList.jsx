@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { Search, MapPin, Briefcase, Calendar, ChevronRight, UserMinus, Eye } from 'lucide-react';
+import { Search, MapPin, Briefcase, Calendar, UserMinus, Eye } from 'lucide-react';
 import { useEmployees } from '../context/EmployeeContext';
 import Card from '../components/common/Card';
 import Input from '../components/common/Input';

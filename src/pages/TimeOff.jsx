@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { Calendar, Check, X, CalendarDays, UserPlus, UserMinus, Plus } from 'lucide-react';
+import { Check, X, CalendarDays, Plus } from 'lucide-react';
 import { useEmployees } from '../context/EmployeeContext';
 import Card from '../components/common/Card';
 import Badge from '../components/common/Badge';

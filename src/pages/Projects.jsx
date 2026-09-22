@@ -1,11 +1,8 @@
 import React, { useState } from 'react';
 import {
-  FolderGit2,
   Users,
-  Calendar,
   Plus,
-  X,
-  CheckSquare
+  X
 } from 'lucide-react';
 import { mockProjects, mockTasks } from '../data/mockTasksAndProjects';
 import { useEmployees } from '../context/EmployeeContext';
@@ -47,7 +44,6 @@ export default function Projects() {
   const totalProjectTasks = selectedProject ? mockTasks.filter(t => t.project === selectedProject.name || t.projectId === selectedProject.id).length : 0;
   const completedProjectTasks = selectedProject ? mockTasks.filter(t => (t.project === selectedProject.name || t.projectId === selectedProject.id) && t.status === 'Completed').length : 0;
   const ongoingProjectTasks = selectedProject ? mockTasks.filter(t => (t.project === selectedProject.name || t.projectId === selectedProject.id) && (t.status === 'In Progress' || t.status === 'In Review')).length : 0;
-  const pendingProjectTasks = selectedProject ? mockTasks.filter(t => (t.project === selectedProject.name || t.projectId === selectedProject.id) && t.status === 'To Do').length : 0;
 
   return (
     <div className="space-y-6 text-left">

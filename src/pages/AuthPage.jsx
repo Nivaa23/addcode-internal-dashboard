@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LayoutDashboard, ArrowUpRight } from 'lucide-react';
@@ -9,35 +9,24 @@ import SignUpForm from '../components/auth/SignUpForm';
 import ThemeSelector from '../components/common/ThemeSelector';
 import logoImg from '../assets/addcode-logo.png';
 
-export default function AuthPage({ initialMode = 'login' }) {
+export default function AuthPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const { login, signup } = useEmployees();
 
-  // Determine current mode from path or prop
-  const currentMode = location.pathname === '/signup' ? 'signup' : (initialMode || 'login');
-  const [mode, setMode] = useState(currentMode);
-
-  useEffect(() => {
-    if (location.pathname === '/signup' && mode !== 'signup') {
-      setMode('signup');
-    } else if (location.pathname === '/login' && mode !== 'login') {
-      setMode('login');
-    }
-  }, [location.pathname]);
+  const mode = location.pathname === '/signup' ? 'signup' : 'login';
 
   const switchMode = (newMode) => {
-    setMode(newMode);
     navigate(newMode === 'signup' ? '/signup' : '/login', { replace: true });
   };
 
-  const handleLoginSuccess = (email, password) => {
-    login(email, password);
+  const handleLoginSuccess = async (email, password) => {
+    await login(email, password);
     navigate('/dashboard');
   };
 
-  const handleSignUpSuccess = ({ name, email }) => {
-    signup({ name, email });
+  const handleSignUpSuccess = async ({ name, email, password }) => {
+    await signup({ name, email, password });
     navigate('/dashboard');
   };
 

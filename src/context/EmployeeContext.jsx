@@ -1,90 +1,11 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { Loader2 } from 'lucide-react';
 import { mockEmployees as initialEmployees, mockActivities as initialActivities, mockStats as initialStats } from '../data/mockEmployees';
+import { supabase } from '../lib/supabase';
+
+import { accentPalettes } from '../constants/theme';
 
 const EmployeeContext = createContext();
-
-export const accentPalettes = {
-  blue: {
-    name: 'Addcode Blue',
-    hex: '#0284c7',
-    600: '#0284c7',
-    700: '#0369a1',
-    500: '#0ea5e9',
-    50: '#f0f9ff',
-    100: '#e0f2fe',
-    200: '#bae6fd'
-  },
-  green: {
-    name: 'Emerald Green',
-    hex: '#16a34a',
-    600: '#16a34a',
-    700: '#15803d',
-    500: '#22c55e',
-    50: '#f0fdf4',
-    100: '#dcfce7',
-    200: '#bbf7d0'
-  },
-  neutral: {
-    name: 'Neutral Dark',
-    hex: '#18181b',
-    600: '#18181b',
-    700: '#09090b',
-    500: '#27272a',
-    50: '#f4f4f5',
-    100: '#e4e4e7',
-    200: '#d4d4d8'
-  },
-  orange: {
-    name: 'Solar Orange',
-    hex: '#ea580c',
-    600: '#ea580c',
-    700: '#c2410c',
-    500: '#f97316',
-    50: '#fff7ed',
-    100: '#ffedd5',
-    200: '#fed7aa'
-  },
-  red: {
-    name: 'Addcode Red',
-    hex: '#dc2626',
-    600: '#dc2626',
-    700: '#b91c1c',
-    500: '#ef4444',
-    50: '#fef2f2',
-    100: '#fee2e2',
-    200: '#fecaca'
-  },
-  rose: {
-    name: 'Rose Crimson',
-    hex: '#e11d48',
-    600: '#e11d48',
-    700: '#be123c',
-    500: '#f43f5e',
-    50: '#fff1f2',
-    100: '#ffe4e6',
-    200: '#fecdd3'
-  },
-  violet: {
-    name: 'Royal Violet',
-    hex: '#7c3aed',
-    600: '#7c3aed',
-    700: '#6d28d9',
-    500: '#8b5cf6',
-    50: '#f5f3ff',
-    100: '#ede9fe',
-    200: '#ddd6fe'
-  },
-  yellow: {
-    name: 'Amber Gold',
-    hex: '#d97706',
-    600: '#d97706',
-    700: '#b45309',
-    500: '#f59e0b',
-    50: '#fffbeb',
-    100: '#fef3c7',
-    200: '#fde68a'
-  }
-};
 
 export const EmployeeProvider = ({ children }) => {
   const [employees, setEmployees] = useState(initialEmployees);
@@ -120,231 +41,149 @@ export const EmployeeProvider = ({ children }) => {
     }
   };
 
-  // Mock Auth State
-  const [isAuthenticated, setIsAuthenticated] = useState(() => {
-    return localStorage.getItem('addcode_auth') === 'true';
-  });
+  // Mock Auth State to be replaced completely but retaining some shapes for UI
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [supabaseUser, setSupabaseUser] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
 
-  const [currentUser, setCurrentUser] = useState(() => {
-    const saved = localStorage.getItem('addcode_user');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (_e) {
-        // fallback
-      }
-    }
-    return {
-      id: "EMP-2026-001",
-      name: "Marcus Vance",
-      role: "Lead Systems Architect",
-      email: "marcus.vance@addcode.engineering",
-      avatar: "M",
-      location: "San Francisco"
-    };
-  });
+  const [currentUser, setCurrentUser] = useState(null);
 
   const [mustChangePassword, setMustChangePassword] = useState(() => {
     return localStorage.getItem('addcode_must_change_password') === 'true';
   });
 
-  const login = (email, password) => {
-    const userToSet = {
-      ...currentUser,
-      email: email || currentUser.email,
-      name: email && email.includes('@') ? email.split('@')[0].split('.').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' ') : currentUser.name
+  const handleSession = async (session) => {
+    if (session?.user) {
+      setSupabaseUser(session.user);
+      setIsAuthenticated(true);
+      
+      try {
+        const { data: employeeData, error } = await supabase
+          .from('employees')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
+
+        if (!error && employeeData) {
+          setCurrentUser({
+            ...employeeData,
+            name: employeeData.name || session.user.user_metadata?.full_name || session.user.email?.split('@')[0],
+            email: session.user.email,
+          });
+        } else {
+          // Graceful fallback if no employee record exists yet
+          setCurrentUser({
+            id: session.user.id,
+            name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0],
+            role: "Employee", // Generic fallback role
+            email: session.user.email,
+          });
+        }
+      } catch {
+        setCurrentUser({
+          id: session.user.id,
+          name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0],
+          role: "Employee",
+          email: session.user.email,
+        });
+      }
+    } else {
+      setSupabaseUser(null);
+      setIsAuthenticated(false);
+      setCurrentUser(null);
+    }
+  };
+
+  useEffect(() => {
+    let mounted = true;
+
+    const initializeSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (mounted) {
+        await handleSession(session);
+        setAuthLoading(false);
+      }
     };
+
+    initializeSession();
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (mounted) {
+        setAuthLoading(true);
+        await handleSession(session);
+        setAuthLoading(false);
+      }
+    });
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, []);
+
+
+
+  const login = async (email, password) => {
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+    if (error) throw error;
     
-    // Simulate first-time login logic (e.g. if the password is the temporary one or if no previous state exists)
-    // For this mock, we force password change on the first ever login of this browser session if the flag hasn't been explicitly set to false
+    // Simulate first-time login logic
     const hasCompletedChange = localStorage.getItem('addcode_password_changed') === 'true';
     if (!hasCompletedChange) {
       setMustChangePassword(true);
       localStorage.setItem('addcode_must_change_password', 'true');
+      sessionStorage.setItem('addcode_initial_password', password);
+    }
+  };
+
+  const signup = async ({ name, email, password }) => {
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          full_name: name
+        }
+      }
+    });
+    if (error) throw error;
+  };
+
+  const logout = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) throw error;
+  };
+
+  const changePassword = async (newPassword) => {
+    const currentPassword = sessionStorage.getItem('addcode_initial_password');
+    const updatePayload = { password: newPassword };
+    
+    if (currentPassword) {
+      updatePayload.current_password = currentPassword;
     }
 
-    setCurrentUser(userToSet);
-    setIsAuthenticated(true);
-    localStorage.setItem('addcode_auth', 'true');
-    localStorage.setItem('addcode_user', JSON.stringify(userToSet));
-  };
-
-  const signup = ({ name, email }) => {
-    const newUser = {
-      id: `EMP-2026-${Math.floor(100 + Math.random() * 900)}`,
-      name: name || "New Engineer",
-      role: "Software Engineer",
-      email: email || "engineer@addcode.engineering",
-      avatar: (name || "N").charAt(0).toUpperCase(),
-      location: "Remote / HQ"
-    };
-    setCurrentUser(newUser);
-    setIsAuthenticated(true);
-    localStorage.setItem('addcode_auth', 'true');
-    localStorage.setItem('addcode_user', JSON.stringify(newUser));
-  };
-
-  const logout = () => {
-    setIsAuthenticated(false);
-    localStorage.removeItem('addcode_auth');
-  };
-
-  const changePassword = (newPassword) => {
-    // In a real app, you would make an API call here.
+    const { error } = await supabase.auth.updateUser(updatePayload);
+    
+    if (error) {
+      // If the API still demands a current password and we lost it (e.g., cross-tab),
+      // we throw the error so the UI handles it, but typically the user should re-login.
+      if (error.message.includes('Current password required') && !currentPassword) {
+        throw new Error('Session expired. Please log out and log back in to change your password.');
+      }
+      throw error;
+    }
+    
     setMustChangePassword(false);
     localStorage.setItem('addcode_must_change_password', 'false');
     localStorage.setItem('addcode_password_changed', 'true');
+    sessionStorage.removeItem('addcode_initial_password');
   };
 
-  const addEmployee = (employeeData) => {
-    const newEmp = {
-      id: `EMP-2026-${Math.floor(100 + Math.random() * 900)}`,
-      status: "Onboarding",
-      attendance: 100.0,
-      performance: 5.0,
-      timeOffRequests: [],
-      documents: [
-        { id: "doc-1", name: "Employment Agreement", status: "Pending", signedDate: "" },
-        { id: "doc-2", name: "NDA", status: "Pending", signedDate: "" },
-        { id: "doc-3", name: "IP Agreement", status: "Pending", signedDate: "" }
-      ],
-      ...employeeData
-    };
-
-    setEmployees(prev => [newEmp, ...prev]);
-
-    const newActivity = {
-      id: `act-${Date.now()}`,
-      type: "onboarding",
-      message: `${newEmp.name} joined the ${newEmp.department} team as ${newEmp.role}`,
-      timestamp: "Just now",
-      user: newEmp.name
-    };
-    setActivities(prev => [newActivity, ...prev]);
-    updateStats([newEmp, ...employees]);
-  };
-
-  const updateEmployee = (id, updatedFields) => {
-    setEmployees(prev => prev.map(emp => {
-      if (emp.id === id) {
-        return { ...emp, ...updatedFields };
-      }
-      return emp;
-    }));
-  };
-
-  const terminateEmployee = (id) => {
-    const employeeToDelete = employees.find(emp => emp.id === id);
-    if (!employeeToDelete) return;
-
-    setEmployees(prev => prev.filter(emp => emp.id !== id));
-
-    const newActivity = {
-      id: `act-${Date.now()}`,
-      type: "termination",
-      message: `${employeeToDelete.name} was offboarded from the company`,
-      timestamp: "Just now",
-      user: employeeToDelete.name
-    };
-    setActivities(prev => [newActivity, ...prev]);
-    updateStats(employees.filter(emp => emp.id !== id));
-  };
-
-  const updateTimeOffRequestStatus = (employeeId, requestId, status) => {
-    setEmployees(prev => prev.map(emp => {
-      if (emp.id === employeeId) {
-        return {
-          ...emp,
-          timeOffRequests: emp.timeOffRequests.map(req => {
-            if (req.id === requestId) {
-              return { ...req, status };
-            }
-            return req;
-          })
-        };
-      }
-      return emp;
-    }));
-
-    const emp = employees.find(e => e.id === employeeId);
-    const req = emp?.timeOffRequests.find(r => r.id === requestId);
-    if (emp && req) {
-      const newActivity = {
-        id: `act-${Date.now()}`,
-        type: "leave",
-        message: `${emp.name}'s ${req.type} request was ${status.toLowerCase()}`,
-        timestamp: "Just now",
-        user: emp.name
-      };
-      setActivities(prev => [newActivity, ...prev]);
-    }
-  };
-
-  const requestTimeOff = (employeeId, type, startDate, endDate, notes) => {
-    const newRequest = {
-      id: `req-${Date.now()}`,
-      type,
-      startDate,
-      endDate,
-      status: "Pending",
-      notes
-    };
-
-    setEmployees(prev => prev.map(emp => {
-      if (emp.id === employeeId) {
-        return {
-          ...emp,
-          timeOffRequests: [newRequest, ...emp.timeOffRequests]
-        };
-      }
-      return emp;
-    }));
-
-    const emp = employees.find(e => e.id === employeeId);
-    if (emp) {
-      const newActivity = {
-        id: `act-${Date.now()}`,
-        type: "leave",
-        message: `${emp.name} submitted a request for ${type}`,
-        timestamp: "Just now",
-        user: emp.name
-      };
-      setActivities(prev => [newActivity, ...prev]);
-    }
-  };
-
-  const signDocument = (employeeId, documentId) => {
-    const today = new Date().toISOString().split('T')[0];
-    setEmployees(prev => prev.map(emp => {
-      if (emp.id === employeeId) {
-        return {
-          ...emp,
-          documents: emp.documents.map(doc => {
-            if (doc.id === documentId) {
-              return { ...doc, status: "Signed", signedDate: today };
-            }
-            return doc;
-          })
-        };
-      }
-      return emp;
-    }));
-
-    const emp = employees.find(e => e.id === employeeId);
-    const doc = emp?.documents.find(d => d.id === documentId);
-    if (emp && doc) {
-      const newActivity = {
-        id: `act-${Date.now()}`,
-        type: "document",
-        message: `${emp.name} signed the document: ${doc.name}`,
-        timestamp: "Just now",
-        user: emp.name
-      };
-      setActivities(prev => [newActivity, ...prev]);
-    }
-  };
-
-  const updateStats = (updatedEmployees) => {
+  const updateStats = useCallback((updatedEmployees) => {
     const total = updatedEmployees.length + 39;
     const onboarding = updatedEmployees.filter(e => e.status === "Onboarding").length;
 
@@ -376,7 +215,163 @@ export const EmployeeProvider = ({ children }) => {
       onboardingActive: onboarding,
       departmentBreakdown: breakdown
     });
-  };
+  }, []);
+
+  const addEmployee = useCallback((employeeData) => {
+    const newEmp = {
+      id: `EMP-2026-${Math.floor(100 + Math.random() * 900)}`,
+      status: "Onboarding",
+      attendance: 100.0,
+      performance: 5.0,
+      timeOffRequests: [],
+      documents: [
+        { id: "doc-1", name: "Employment Agreement", status: "Pending", signedDate: "" },
+        { id: "doc-2", name: "NDA", status: "Pending", signedDate: "" },
+        { id: "doc-3", name: "IP Agreement", status: "Pending", signedDate: "" }
+      ],
+      ...employeeData
+    };
+
+    setEmployees(prev => [newEmp, ...prev]);
+
+    const newActivity = {
+      id: `act-${Date.now()}`,
+      type: "onboarding",
+      message: `${newEmp.name} joined the ${newEmp.department} team as ${newEmp.role}`,
+      timestamp: "Just now",
+      user: newEmp.name
+    };
+    setActivities(prev => [newActivity, ...prev]);
+    updateStats([newEmp, ...employees]);
+  }, [employees, updateStats]);
+
+  const updateEmployee = useCallback((id, updatedFields) => {
+    setEmployees(prev => prev.map(emp => {
+      if (emp.id === id) {
+        return { ...emp, ...updatedFields };
+      }
+      return emp;
+    }));
+  }, []);
+
+  const terminateEmployee = useCallback((id) => {
+    const employeeToDelete = employees.find(emp => emp.id === id);
+    if (!employeeToDelete) return;
+
+    setEmployees(prev => prev.filter(emp => emp.id !== id));
+
+    const newActivity = {
+      id: `act-${Date.now()}`,
+      type: "termination",
+      message: `${employeeToDelete.name} was offboarded from the company`,
+      timestamp: "Just now",
+      user: employeeToDelete.name
+    };
+    setActivities(prev => [newActivity, ...prev]);
+    updateStats(employees.filter(emp => emp.id !== id));
+  }, [employees, updateStats]);
+
+  const updateTimeOffRequestStatus = useCallback((employeeId, requestId, status) => {
+    setEmployees(prev => prev.map(emp => {
+      if (emp.id === employeeId) {
+        return {
+          ...emp,
+          timeOffRequests: emp.timeOffRequests.map(req => {
+            if (req.id === requestId) {
+              return { ...req, status };
+            }
+            return req;
+          })
+        };
+      }
+      return emp;
+    }));
+
+    const emp = employees.find(e => e.id === employeeId);
+    const req = emp?.timeOffRequests.find(r => r.id === requestId);
+    if (emp && req) {
+      const newActivity = {
+        id: `act-${Date.now()}`,
+        type: "leave",
+        message: `${emp.name}'s ${req.type} request was ${status.toLowerCase()}`,
+        timestamp: "Just now",
+        user: emp.name
+      };
+      setActivities(prev => [newActivity, ...prev]);
+    }
+  }, [employees]);
+
+  const requestTimeOff = useCallback((employeeId, type, startDate, endDate, notes) => {
+    const newRequest = {
+      id: `req-${Date.now()}`,
+      type,
+      startDate,
+      endDate,
+      status: "Pending",
+      notes
+    };
+
+    setEmployees(prev => prev.map(emp => {
+      if (emp.id === employeeId) {
+        return {
+          ...emp,
+          timeOffRequests: [newRequest, ...emp.timeOffRequests]
+        };
+      }
+      return emp;
+    }));
+
+    const emp = employees.find(e => e.id === employeeId);
+    if (emp) {
+      const newActivity = {
+        id: `act-${Date.now()}`,
+        type: "leave",
+        message: `${emp.name} submitted a request for ${type}`,
+        timestamp: "Just now",
+        user: emp.name
+      };
+      setActivities(prev => [newActivity, ...prev]);
+    }
+  }, [employees]);
+
+  const signDocument = useCallback((employeeId, documentId) => {
+    const today = new Date().toISOString().split('T')[0];
+    setEmployees(prev => prev.map(emp => {
+      if (emp.id === employeeId) {
+        return {
+          ...emp,
+          documents: emp.documents.map(doc => {
+            if (doc.id === documentId) {
+              return { ...doc, status: "Signed", signedDate: today };
+            }
+            return doc;
+          })
+        };
+      }
+      return emp;
+    }));
+
+    const emp = employees.find(e => e.id === employeeId);
+    const doc = emp?.documents.find(d => d.id === documentId);
+    if (emp && doc) {
+      const newActivity = {
+        id: `act-${Date.now()}`,
+        type: "document",
+        message: `${emp.name} signed the document: ${doc.name}`,
+        timestamp: "Just now",
+        user: emp.name
+      };
+      setActivities(prev => [newActivity, ...prev]);
+    }
+  }, [employees]);
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <Loader2 className="w-8 h-8 animate-spin text-brand-600" />
+      </div>
+    );
+  }
 
   return (
     <EmployeeContext.Provider value={{
@@ -394,6 +389,7 @@ export const EmployeeProvider = ({ children }) => {
       isAuthenticated,
       mustChangePassword,
       currentUser,
+      supabaseUser,
       login,
       signup,
       logout,
@@ -404,6 +400,7 @@ export const EmployeeProvider = ({ children }) => {
   );
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useEmployees = () => {
   const context = useContext(EmployeeContext);
   if (!context) {

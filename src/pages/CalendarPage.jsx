@@ -5,10 +5,8 @@ import {
   X,
   Clock
 } from 'lucide-react';
-import { useEmployees } from '../context/EmployeeContext';
 
 export default function CalendarPage() {
-  const { currentUser } = useEmployees();
   const [selectedEvent, setSelectedEvent] = useState(null);
 
   const events = [

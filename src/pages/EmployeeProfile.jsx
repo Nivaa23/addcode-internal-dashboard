@@ -12,7 +12,7 @@ import { useEmployees } from '../context/EmployeeContext';
 
 export default function EmployeeProfile() {
   const { id } = useParams();
-  const { employees, currentUser, updateEmployee, requestTimeOff, signDocument } = useEmployees();
+  const { employees, currentUser, updateEmployee, signDocument } = useEmployees();
 
   const resolvedId = id || currentUser.id;
   const emp = employees.find(e => e.id === resolvedId) || {
@@ -51,13 +51,6 @@ export default function EmployeeProfile() {
     status: emp.status || 'Active',
     location: emp.location || 'San Francisco',
     bio: emp.bio || ''
-  });
-
-  const [leaveForm, setLeaveForm] = useState({
-    type: 'Vacation',
-    startDate: '',
-    endDate: '',
-    notes: ''
   });
 
   const getInitials = (name) => {

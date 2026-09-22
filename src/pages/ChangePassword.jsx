@@ -12,7 +12,7 @@ export default function ChangePassword() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!newPassword || !confirmPassword) {
       setError('Please fill in both fields.');
@@ -30,11 +30,14 @@ export default function ChangePassword() {
     setError('');
     setLoading(true);
 
-    setTimeout(() => {
-      setLoading(false);
-      changePassword(newPassword);
+    try {
+      await changePassword(newPassword);
       navigate('/dashboard', { replace: true });
-    }, 800);
+    } catch (err) {
+      setError(err.message || 'Failed to update password');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleLogout = () => {
