@@ -60,7 +60,7 @@ const Modal = ({
             className={`bg-white w-full ${sizes[size]} rounded-2xl shadow-2xl border border-slate-100 flex flex-col z-10 max-h-[90vh] overflow-hidden`}
           >
             {/* Header */}
-            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between flex-shrink-0">
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between shrink-0">
               <h3 className="font-display font-semibold text-slate-800 text-lg leading-6">
                 {title}
               </h3>
@@ -74,13 +74,13 @@ const Modal = ({
             </div>
 
             {/* Content (Scrollable) */}
-            <div className="px-6 py-6 overflow-y-auto flex-grow text-slate-600 text-sm">
+            <div className="px-6 py-6 overflow-y-auto grow text-slate-600 text-sm">
               {children}
             </div>
 
             {/* Footer */}
             {footerActions && (
-              <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/50 flex items-center justify-end gap-3 flex-shrink-0">
+              <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/50 flex items-center justify-end gap-3 shrink-0">
                 {footerActions}
               </div>
             )}

@@ -54,7 +54,7 @@ const Onboarding = () => {
             <h3 className="font-display font-bold text-slate-800 text-base leading-snug">Active Onboarding Funnel</h3>
             <p className="text-xs text-slate-400 font-semibold">Track documentation, contract signings, and operational setup for new hires.</p>
           </div>
-          <div className="bg-brand-50 border border-brand-100 rounded-xl px-5 py-3 text-center flex-shrink-0">
+          <div className="bg-brand-50 border border-brand-100 rounded-xl px-5 py-3 text-center flexshrink-0">
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Currently Boarding</span>
             <span className="font-display font-extrabold text-2xl text-brand-700">{onboardingStaff.length} hires</span>
           </div>
@@ -117,7 +117,7 @@ const Onboarding = () => {
                       <div className="space-y-2.5">
                         {staff.documents.map((doc) => (
                           <div key={doc.id} className="flex items-center justify-between text-xs font-semibold">
-                            <span className="text-slate-600 truncate max-w-[150px]">{doc.name}</span>
+                            <span className="text-slate-600 truncate max-w-37.5">{doc.name}</span>
                             {doc.status === 'Signed' ? (
                               <span className="text-emerald-600 text-[10px] font-bold uppercase">Signed</span>
                             ) : (

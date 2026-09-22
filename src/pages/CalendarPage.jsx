@@ -93,7 +93,7 @@ export default function CalendarPage() {
             return (
               <div
                 key={dayNum}
-                className={`min-h-[84px] p-1.5 rounded border flex flex-col justify-between ${isToday ? 'border-slate-900 bg-slate-50 font-bold' : 'border-slate-100 bg-white hover:bg-slate-50'
+                className={`min-h-21 p-1.5 rounded border flex flex-col justify-between ${isToday ? 'border-slate-900 bg-slate-50 font-bold' : 'border-slate-100 bg-white hover:bg-slate-50'
                   }`}
               >
                 <div className="flex items-center justify-between">
