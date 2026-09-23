@@ -68,7 +68,7 @@ export default function Tasks() {
   };
 
   const handleStatusChange = (taskId, newStatus) => {
-    const updatedUser = currentUser?.name || 'Nivrutti';
+    const updatedUser = currentUser?.name;
     setTasks(prev => prev.map(t => {
       if (t.id === taskId) {
         const newProgress = newStatus === 'Completed' ? 100 : t.progress;
@@ -93,7 +93,7 @@ export default function Tasks() {
 
   const handleProgressChange = (taskId, newProgressValue) => {
     const progressNum = Math.min(100, Math.max(0, parseInt(newProgressValue, 10) || 0));
-    const updatedUser = currentUser?.name || 'Nivrutti';
+    const updatedUser = currentUser?.name;
     setTasks(prev => prev.map(t => {
       if (t.id === taskId) {
         const newStatus = progressNum === 100 ? 'Completed' : t.status;
@@ -120,8 +120,8 @@ export default function Tasks() {
     e.preventDefault();
     if (!newCommentText.trim() || !selectedTask) return;
 
-    const authorName = currentUser?.name || 'Nivrutti';
-    const authorAvatar = currentUser?.avatar || authorName.slice(0, 2).toUpperCase();
+    const authorName = currentUser?.name;
+    const authorAvatar = currentUser?.avatar || (authorName ? authorName.slice(0, 2).toUpperCase() : '');
 
     const newComment = {
       id: `comm-${Date.now()}`,
@@ -173,11 +173,11 @@ export default function Tasks() {
               priority: 'Medium',
               dueDate: new Date().toISOString().split('T')[0],
               progress: 0,
-              assignedBy: currentUser?.name || 'Sarah Connor',
-              assignee: currentUser?.name || 'Nivrutti',
+              assignedBy: currentUser?.name || 'Manager',
+              assignee: currentUser?.name,
               description: 'Created new sprint action item.',
               comments: [],
-              activity: [{ id: `act-${Date.now()}`, event: 'Task created', user: currentUser?.name || 'Nivrutti', timestamp: 'Just now' }]
+              activity: [{ id: `act-${Date.now()}`, event: 'Task created', user: currentUser?.name, timestamp: 'Just now' }]
             };
             setTasks([newTaskObj, ...tasks]);
             setSelectedTask(newTaskObj);

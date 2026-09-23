@@ -16,22 +16,22 @@ export default function EmployeeProfile() {
 
   const resolvedId = id || currentUser.id;
   const emp = employees.find(e => e.id === resolvedId) || {
-    id: "EMP-2026-001",
-    name: currentUser.name || "Nivrutti",
-    role: "Lead Systems Architect",
-    department: "Engineering",
-    email: "nivrutti@addcode.engineering",
-    phone: "+1 (555) 019-2834",
-    joinDate: "2021-06-01",
-    status: "Active",
-    employmentType: "Full-Time Permanent",
-    location: "San Francisco",
-    manager: "Sarah Connor",
-    bio: "Lead Systems Architect at Addcode Engineering. Driving core platform architecture, serverless migration, and infrastructure scalability.",
-    skills: ["System Architecture", "React", "Node.js", "Scalability", "AWS"],
-    projects: ["Addcode Internal Dashboard", "Project Phoenix"],
-    attendance: 99.5,
-    performance: 4.9,
+    id: "Unlinked",
+    name: currentUser?.name || "Account Not Linked",
+    role: currentUser?.role || "Pending Setup",
+    department: "Unassigned",
+    email: currentUser?.email || "",
+    phone: "-",
+    joinDate: "-",
+    status: "Pending Setup",
+    employmentType: "-",
+    location: "-",
+    manager: "-",
+    bio: "Account is not yet linked to an employee profile.",
+    skills: [],
+    projects: [],
+    attendance: 0,
+    performance: 0,
     timeOffRequests: [],
     documents: []
   };
@@ -45,7 +45,7 @@ export default function EmployeeProfile() {
     department: emp.department || '',
     email: emp.email || '',
     phone: emp.phone || '',
-    manager: emp.manager || 'Sarah Connor',
+    manager: emp.manager || 'Unassigned',
     joinDate: emp.joinDate || '2021-06-01',
     employmentType: emp.employmentType || 'Full-Time Permanent',
     status: emp.status || 'Active',
@@ -171,7 +171,7 @@ export default function EmployeeProfile() {
                 </div>
                 <div>
                   <span className="text-[10px] text-slate-400 font-bold uppercase block">Reporting Manager</span>
-                  <span className="font-semibold text-slate-900 mt-0.5 block">{emp.manager || 'Sarah Connor'}</span>
+                  <span className="font-semibold text-slate-900 mt-0.5 block">{emp.manager || 'Unassigned'}</span>
                 </div>
                 <div>
                   <span className="text-[10px] text-slate-400 font-bold uppercase block">Joining Date</span>

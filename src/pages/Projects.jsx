@@ -61,14 +61,14 @@ export default function Projects() {
               description: 'Designing high-performance platform subsystem module.',
               status: 'In Progress',
               progress: 20,
-              projectLead: currentUser?.name || 'Nivrutti',
-              leadRole: 'Lead Systems Architect',
-              leadAvatar: 'N',
+              projectLead: currentUser?.name,
+              leadRole: currentUser?.role || 'Lead',
+              leadAvatar: currentUser?.name ? currentUser.name[0].toUpperCase() : 'U',
               teamSize: 4,
               startDate: new Date().toISOString().split('T')[0],
               expectedCompletion: '2026-11-30',
               teamMembers: [
-                { name: currentUser?.name || 'Nivrutti', role: 'Lead Architect', avatar: 'N' }
+                { name: currentUser?.name, role: currentUser?.role || 'Lead Architect', avatar: currentUser?.name ? currentUser.name[0].toUpperCase() : 'U' }
               ]
             };
             setProjectsList([newProj, ...projectsList]);

@@ -47,10 +47,8 @@ export const EmployeeProvider = ({ children }) => {
   const [authLoading, setAuthLoading] = useState(true);
 
   const [currentUser, setCurrentUser] = useState(null);
-
-  const [mustChangePassword, setMustChangePassword] = useState(() => {
-    return localStorage.getItem('addcode_must_change_password') === 'true';
-  });
+  const [mustChangePassword, setMustChangePassword] = useState(false);
+  const [workSession, setWorkSession] = useState(null);
 
   const handleSession = async (session) => {
     if (session?.user) {
@@ -61,31 +59,45 @@ export const EmployeeProvider = ({ children }) => {
         const { data: employeeData, error } = await supabase
           .from('employees')
           .select('*')
-          .eq('id', session.user.id)
+          .eq('auth_user_id', session.user.id)
           .single();
 
         if (!error && employeeData) {
           setCurrentUser({
             ...employeeData,
-            name: employeeData.name || session.user.user_metadata?.full_name || session.user.email?.split('@')[0],
-            email: session.user.email,
+            name: employeeData.full_name || employeeData.name || session.user.email?.split('@')[0],
+            role: employeeData.designation || employeeData.role || 'Employee'
           });
+          setMustChangePassword(employeeData.must_change_password);
+
+          // Fetch active work session
+          const { data: sessionData } = await supabase
+            .from('work_sessions')
+            .select('*')
+            .eq('employee_id', employeeData.id)
+            .is('check_out_time', null)
+            .maybeSingle();
+            
+          setWorkSession(sessionData || null);
         } else {
-          // Graceful fallback if no employee record exists yet
           setCurrentUser({
-            id: session.user.id,
-            name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0],
-            role: "Employee", // Generic fallback role
-            email: session.user.email,
+            id: null,
+            unlinked: true,
+            name: "Account Not Linked",
+            role: "Pending Setup",
+            email: session.user.email
           });
+          setMustChangePassword(false);
         }
       } catch {
         setCurrentUser({
-          id: session.user.id,
-          name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0],
-          role: "Employee",
-          email: session.user.email,
+          id: null,
+          unlinked: true,
+          name: "Account Not Linked",
+          role: "Pending Setup",
+          email: session.user.email
         });
+        setMustChangePassword(false);
       }
     } else {
       setSupabaseUser(null);
@@ -181,6 +193,37 @@ export const EmployeeProvider = ({ children }) => {
     localStorage.setItem('addcode_must_change_password', 'false');
     localStorage.setItem('addcode_password_changed', 'true');
     sessionStorage.removeItem('addcode_initial_password');
+  };
+
+  const checkIn = async () => {
+    if (!currentUser || !currentUser.id) return;
+    const { data, error } = await supabase
+      .from('work_sessions')
+      .insert([{
+        employee_id: currentUser.id,
+        check_in_time: new Date().toISOString(),
+        session_date: new Date().toISOString().split('T')[0]
+      }])
+      .select()
+      .single();
+      
+    if (!error && data) {
+      setWorkSession(data);
+    }
+  };
+
+  const checkOut = async () => {
+    if (!workSession) return;
+    const { data, error } = await supabase
+      .from('work_sessions')
+      .update({ check_out_time: new Date().toISOString() })
+      .eq('id', workSession.id)
+      .select()
+      .single();
+      
+    if (!error && data) {
+      setWorkSession(data);
+    }
   };
 
   const updateStats = useCallback((updatedEmployees) => {
@@ -390,6 +433,9 @@ export const EmployeeProvider = ({ children }) => {
       mustChangePassword,
       currentUser,
       supabaseUser,
+      workSession,
+      checkIn,
+      checkOut,
       login,
       signup,
       logout,

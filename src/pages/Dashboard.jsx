@@ -10,55 +10,43 @@ import {
 import { useEmployees } from '../context/EmployeeContext';
 
 export default function Dashboard() {
-  const { activities } = useEmployees();
+  const { activities, currentUser, workSession, checkIn, checkOut } = useEmployees();
 
-  // 1. Mock local state for Today's Check-in & Live Timer
-  const [isLoggedIn, setIsLoggedIn] = useState(true);
-  const [checkInTime, setCheckInTime] = useState("09:18 AM");
-  const [checkOutTime, setCheckOutTime] = useState("");
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
-  // Timer state in seconds (Initial: 4 hours, 35 minutes, 41 seconds = 16541s)
-  const [elapsedSeconds, setElapsedSeconds] = useState(4 * 3600 + 35 * 60 + 41);
-
-  // Live timer effect
   useEffect(() => {
     let interval = null;
-    if (isLoggedIn) {
+    if (workSession && !workSession.check_out_time) {
+      const start = new Date(workSession.check_in_time).getTime();
+      setElapsedSeconds(Math.floor((Date.now() - start) / 1000));
       interval = setInterval(() => {
-        setElapsedSeconds((prev) => prev + 1);
+        setElapsedSeconds(Math.floor((Date.now() - start) / 1000));
       }, 1000);
+    } else if (workSession && workSession.check_out_time) {
+      const start = new Date(workSession.check_in_time).getTime();
+      const end = new Date(workSession.check_out_time).getTime();
+      setElapsedSeconds(Math.floor((end - start) / 1000));
+    } else {
+      setElapsedSeconds(0);
     }
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [isLoggedIn]);
+    return () => clearInterval(interval);
+  }, [workSession]);
 
-  // Format seconds to HH:MM:SS
-  const formatTimer = (totalSec) => {
-    const hrs = Math.floor(totalSec / 3600);
-    const mins = Math.floor((totalSec % 3600) / 60);
-    const secs = totalSec % 60;
-    const pad = (num) => String(num).padStart(2, '0');
-    return `${pad(hrs)}:${pad(mins)}:${pad(secs)}`;
-  };
+  const displayCheckInTime = workSession 
+    ? new Date(workSession.check_in_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    : '--:--';
+    
+  const displayCheckOutTime = workSession && workSession.check_out_time
+    ? new Date(workSession.check_out_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    : '';
 
-  // Format work hours summary (e.g. "4h 35m")
-  const formatWorkHoursSummary = (totalSec) => {
-    const hrs = Math.floor(totalSec / 3600);
-    const mins = Math.floor((totalSec % 3600) / 60);
-    return `${hrs}h ${mins}m`;
-  };
+  const isSessionActive = workSession && !workSession.check_out_time;
 
   const handleCheckInToggle = () => {
-    if (isLoggedIn) {
-      setIsLoggedIn(false);
-      const now = new Date();
-      setCheckOutTime(now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
-    } else {
-      setIsLoggedIn(true);
-      const now = new Date();
-      setCheckInTime(now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
-      setCheckOutTime("");
+    if (isSessionActive) {
+      checkOut();
+    } else if (!workSession) {
+      checkIn();
     }
   };
 
@@ -116,7 +104,7 @@ export default function Dashboard() {
       {/* Header Overview Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b border-slate-200">
         <div>
-          <h2 className="text-2xl lg:text-3xl font-bold text-slate-900 font-sans">Good morning, Nivrutti</h2>
+          <h2 className="text-2xl lg:text-3xl font-bold text-slate-900 font-sans">Good morning, {currentUser?.name?.split(' ')[0] || 'Employee'}</h2>
           <p className="text-xs lg:text-sm text-slate-500 font-medium mt-1">Here is your daily engineering workflow overview.</p>
         </div>
         <div className="flex items-center gap-2 self-start sm:self-auto">
@@ -139,18 +127,19 @@ export default function Dashboard() {
             <div className="space-y-2">
               <span className="text-xs font-semibold text-slate-500 block">Today's Check-In</span>
               <div className="flex items-center justify-between">
-                <span className="text-2xl font-bold text-slate-900 tracking-tight">{checkInTime}</span>
-                <span className={`text-[10px] font-bold uppercase px-2.5 py-1 rounded-full ${isLoggedIn ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-500'}`}>
-                  {isLoggedIn ? 'Logged In' : 'Logged Out'}
+                <span className="text-2xl font-bold text-slate-900 tracking-tight">{displayCheckInTime}</span>
+                <span className={`text-[10px] font-bold uppercase px-2.5 py-1 rounded-full ${isSessionActive ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-500'}`}>
+                  {isSessionActive ? 'Logged In' : 'Logged Out'}
                 </span>
               </div>
             </div>
             <div className="pt-2">
               <button
                 onClick={handleCheckInToggle}
-                className="w-full py-2.5 px-4 bg-brand-600 hover:bg-brand-700 text-white rounded-md text-xs font-semibold transition-colors cursor-pointer shadow-xs focus:ring-2 focus:ring-brand-500 focus:outline-none flex items-center justify-center gap-1.5"
+                disabled={workSession && workSession.check_out_time}
+                className={`w-full py-2.5 px-4 rounded-md text-xs font-semibold transition-colors shadow-xs focus:outline-none flex items-center justify-center gap-1.5 ${isSessionActive ? 'bg-brand-600 hover:bg-brand-700 text-white cursor-pointer' : (workSession && workSession.check_out_time ? 'bg-slate-200 text-slate-500 cursor-not-allowed' : 'bg-brand-600 hover:bg-brand-700 text-white cursor-pointer')}`}
               >
-                {isLoggedIn ? 'Check Out / Log Out' : 'Check In'}
+                {isSessionActive ? 'Check Out' : (workSession && workSession.check_out_time ? 'Session Ended' : 'Check In')}
               </button>
             </div>
           </div>
@@ -172,14 +161,14 @@ export default function Dashboard() {
                     {formatTimer(elapsedSeconds)}
                   </div>
                   <span className="text-[11px] text-slate-500 font-medium block mt-1">
-                    {isLoggedIn ? `Working since ${checkInTime}` : `Session ended ${checkOutTime ? 'at ' + checkOutTime : ''}`}
+                    {isSessionActive ? `Working since ${displayCheckInTime}` : (workSession ? `Session ended at ${displayCheckOutTime}` : 'Not checked in yet')}
                   </span>
                 </div>
                 <div className="text-right">
-                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase border ${isLoggedIn ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-100 text-slate-500 border-slate-200'
+                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase border ${isSessionActive ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-100 text-slate-500 border-slate-200'
                     }`}>
-                    <span className={`w-1.5 h-1.5 rounded-full ${isLoggedIn ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`}></span>
-                    {isLoggedIn ? 'Live' : 'Ended'}
+                    <span className={`w-1.5 h-1.5 rounded-full ${isSessionActive ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`}></span>
+                    {isSessionActive ? 'Live' : 'Ended'}
                   </span>
                 </div>
               </div>
