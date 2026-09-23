@@ -70,12 +70,15 @@ export const EmployeeProvider = ({ children }) => {
           });
           setMustChangePassword(employeeData.must_change_password);
 
-          // Fetch active work session
+          // Fetch today's work session (either active or completed)
+          const today = new Date().toISOString().split('T')[0];
           const { data: sessionData } = await supabase
             .from('work_sessions')
             .select('*')
             .eq('employee_id', employeeData.id)
-            .is('check_out_time', null)
+            .eq('session_date', today)
+            .order('check_in_time', { ascending: false })
+            .limit(1)
             .maybeSingle();
             
           setWorkSession(sessionData || null);
@@ -143,13 +146,7 @@ export const EmployeeProvider = ({ children }) => {
     });
     if (error) throw error;
     
-    // Simulate first-time login logic
-    const hasCompletedChange = localStorage.getItem('addcode_password_changed') === 'true';
-    if (!hasCompletedChange) {
-      setMustChangePassword(true);
-      localStorage.setItem('addcode_must_change_password', 'true');
-      sessionStorage.setItem('addcode_initial_password', password);
-    }
+    sessionStorage.setItem('addcode_initial_password', password);
   };
 
   const signup = async ({ name, email, password }) => {

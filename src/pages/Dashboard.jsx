@@ -32,6 +32,23 @@ export default function Dashboard() {
     return () => clearInterval(interval);
   }, [workSession]);
 
+  // Format seconds to HH:MM:SS
+  const formatTimer = (totalSec) => {
+    const hrs = Math.floor(totalSec / 3600);
+    const mins = Math.floor((totalSec % 3600) / 60);
+    const secs = totalSec % 60;
+    const pad = (num) => String(num).padStart(2, '0');
+    return `${pad(hrs)}:${pad(mins)}:${pad(secs)}`;
+  };
+
+  // Format work hours summary (e.g. "4h 35m")
+  const formatWorkHoursSummary = (totalSec) => {
+    const hrs = Math.floor(totalSec / 3600);
+    const mins = Math.floor((totalSec % 3600) / 60);
+    return `${hrs}h ${mins}m`;
+  };
+
+
   const displayCheckInTime = workSession 
     ? new Date(workSession.check_in_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     : '--:--';

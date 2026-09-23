@@ -3,40 +3,41 @@ import {
   LogIn,
   LogOut
 } from 'lucide-react';
+import { useEmployees } from '../context/EmployeeContext';
 
 export default function Attendance() {
 
-  const [isCheckedIn, setIsCheckedIn] = useState(true);
-  const [totalWorkHours, setTotalWorkHours] = useState('6h 45m');
-
-  const [workSessions, setWorkSessions] = useState([
-    { id: 1, start: '09:18 AM', end: '12:45 PM', duration: '3h 27m', type: 'Morning Session' },
-    { id: 2, start: '01:30 PM', end: 'Current', duration: '3h 18m', type: 'Afternoon Session' }
-  ]);
+  const { workSession, checkIn, checkOut } = useEmployees();
+  const isSessionActive = workSession && !workSession.check_out_time;
 
   const handleToggleCheckIn = () => {
-    const now = new Date();
-    const formattedTime = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-    if (isCheckedIn) {
-      setIsCheckedIn(false);
-      setCheckOutTime(formattedTime);
-      setWorkSessions(prev => prev.map(s => s.id === 2 ? { ...s, end: formattedTime, duration: '3h 45m' } : s));
-      setTotalWorkHours('7h 12m');
-    } else {
-      setIsCheckedIn(true);
-      setCheckInTime(formattedTime);
-      setCheckOutTime('Current');
-      const newSession = {
-        id: Date.now(),
-        start: formattedTime,
-        end: 'Current',
-        duration: '0h 01m',
-        type: 'Extra Session'
-      };
-      setWorkSessions(prev => [...prev, newSession]);
+    if (isSessionActive) {
+      checkOut();
+    } else if (!workSession) {
+      checkIn();
     }
   };
+
+  const displaySessions = [];
+  if (workSession) {
+    const start = new Date(workSession.check_in_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    let end = 'Current';
+    let duration = 'Live';
+    
+    if (workSession.check_out_time) {
+      end = new Date(workSession.check_out_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const elapsed = Math.floor((new Date(workSession.check_out_time).getTime() - new Date(workSession.check_in_time).getTime()) / 1000);
+      duration = `${Math.floor(elapsed / 3600)}h ${Math.floor((elapsed % 3600) / 60)}m`;
+    }
+    
+    displaySessions.push({
+      id: workSession.id,
+      start,
+      end,
+      duration,
+      type: 'Work Session'
+    });
+  }
 
   const attendanceDays = [
     { day: 1, status: 'Present' },
@@ -99,19 +100,20 @@ export default function Attendance() {
         </div>
 
         <div className="flex items-center gap-3 self-start sm:self-auto">
-          <span className={`text-xs font-semibold px-2 py-1 rounded border ${isCheckedIn ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-100 text-slate-500 border-slate-200'
+          <span className={`text-xs font-semibold px-2 py-1 rounded border ${isSessionActive ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-100 text-slate-500 border-slate-200'
             }`}>
-            {isCheckedIn ? 'Status: Checked In' : 'Status: Checked Out'}
+            {isSessionActive ? 'Status: Checked In' : 'Status: Checked Out'}
           </span>
           <button
             onClick={handleToggleCheckIn}
-            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-semibold shadow-xs transition-colors cursor-pointer ${isCheckedIn
-                ? 'bg-slate-900 hover:bg-slate-800 text-white'
-                : 'bg-brand-600 hover:bg-brand-700 text-white'
+            disabled={workSession && workSession.check_out_time}
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-semibold shadow-xs transition-colors ${isSessionActive
+                ? 'bg-slate-900 hover:bg-slate-800 text-white cursor-pointer'
+                : (workSession && workSession.check_out_time ? 'bg-slate-200 text-slate-500 cursor-not-allowed' : 'bg-brand-600 hover:bg-brand-700 text-white cursor-pointer')
               }`}
           >
-            {isCheckedIn ? <LogOut className="w-3.5 h-3.5" /> : <LogIn className="w-3.5 h-3.5" />}
-            <span>{isCheckedIn ? 'Check Out' : 'Check In'}</span>
+            {isSessionActive ? <LogOut className="w-3.5 h-3.5" /> : <LogIn className="w-3.5 h-3.5" />}
+            <span>{isSessionActive ? 'Check Out' : (workSession && workSession.check_out_time ? 'Session Ended' : 'Check In')}</span>
           </button>
         </div>
       </div>
@@ -148,7 +150,7 @@ export default function Attendance() {
           <div className="space-y-3">
             <h3 className="text-xs font-bold text-slate-900 pb-2 border-b border-slate-100">Today's Work Sessions</h3>
             <div className="space-y-2">
-              {workSessions.map((session) => (
+              {displaySessions.map((session) => (
                 <div key={session.id} className="p-2.5 bg-slate-50 border border-slate-200 rounded flex items-center justify-between text-xs">
                   <div>
                     <p className="font-semibold text-slate-900">{session.type}</p>
@@ -159,13 +161,18 @@ export default function Attendance() {
                   </span>
                 </div>
               ))}
+              {displaySessions.length === 0 && (
+                <div className="p-2.5 bg-slate-50 border border-slate-200 rounded text-center text-xs text-slate-500">
+                  No active session today.
+                </div>
+              )}
             </div>
           </div>
 
           <div className="pt-3 border-t border-slate-100 space-y-2 text-xs font-medium text-slate-600">
             <div className="flex justify-between">
               <span>Total Work Hours:</span>
-              <span className="font-bold text-slate-900">{totalWorkHours}</span>
+              <span className="font-bold text-slate-900">{displaySessions[0] && displaySessions[0].duration !== 'Live' ? displaySessions[0].duration : '--'}</span>
             </div>
             <div className="flex justify-between">
               <span>Expected Work Hours:</span>
