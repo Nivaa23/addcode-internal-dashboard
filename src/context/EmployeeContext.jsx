@@ -70,18 +70,30 @@ export const EmployeeProvider = ({ children }) => {
           });
           setMustChangePassword(employeeData.must_change_password);
 
-          // Fetch today's work session (either active or completed)
-          const today = new Date().toISOString().split('T')[0];
-          const { data: sessionData } = await supabase
+          // Fetch active work session first (where check_out_time IS NULL)
+          const { data: activeSession } = await supabase
             .from('work_sessions')
             .select('*')
             .eq('employee_id', employeeData.id)
-            .eq('session_date', today)
-            .order('check_in_time', { ascending: false })
-            .limit(1)
+            .is('check_out_time', null)
             .maybeSingle();
-            
-          setWorkSession(sessionData || null);
+
+          if (activeSession) {
+            setWorkSession(activeSession);
+          } else {
+            // Otherwise fetch today's latest session (completed)
+            const today = new Date().toISOString().split('T')[0];
+            const { data: sessionData } = await supabase
+              .from('work_sessions')
+              .select('*')
+              .eq('employee_id', employeeData.id)
+              .eq('session_date', today)
+              .order('check_in_time', { ascending: false })
+              .limit(1)
+              .maybeSingle();
+              
+            setWorkSession(sessionData || null);
+          }
         } else {
           setCurrentUser({
             id: null,
@@ -178,22 +190,53 @@ export const EmployeeProvider = ({ children }) => {
     const { error } = await supabase.auth.updateUser(updatePayload);
     
     if (error) {
-      // If the API still demands a current password and we lost it (e.g., cross-tab),
-      // we throw the error so the UI handles it, but typically the user should re-login.
       if (error.message.includes('Current password required') && !currentPassword) {
         throw new Error('Session expired. Please log out and log back in to change your password.');
       }
       throw error;
     }
     
+    // Update public.employees table in Supabase so must_change_password becomes false in DB
+    const userId = supabaseUser?.id || currentUser?.auth_user_id;
+    if (userId) {
+      const { error: dbError } = await supabase
+        .from('employees')
+        .update({ must_change_password: false })
+        .eq('auth_user_id', userId);
+        
+      if (dbError) {
+        console.error('Failed to update must_change_password in database:', dbError);
+        throw new Error(`Failed to persist password change to database: ${dbError.message}`);
+      }
+    } else {
+      throw new Error('User session ID not found. Unable to update employee record.');
+    }
+    
     setMustChangePassword(false);
-    localStorage.setItem('addcode_must_change_password', 'false');
-    localStorage.setItem('addcode_password_changed', 'true');
+    setCurrentUser(prev => prev ? { ...prev, must_change_password: false } : prev);
     sessionStorage.removeItem('addcode_initial_password');
   };
 
   const checkIn = async () => {
-    if (!currentUser || !currentUser.id) return;
+    if (!currentUser || !currentUser.id) {
+      console.warn('Cannot check in: currentUser or currentUser.id is not available', currentUser);
+      throw new Error('Employee identity not resolved. Cannot check in.');
+    }
+
+    // Check for existing active session (prevent duplicate active sessions)
+    const { data: existingActive } = await supabase
+      .from('work_sessions')
+      .select('*')
+      .eq('employee_id', currentUser.id)
+      .is('check_out_time', null)
+      .maybeSingle();
+
+    if (existingActive) {
+      console.log('Active work session already exists:', existingActive);
+      setWorkSession(existingActive);
+      return;
+    }
+
     const { data, error } = await supabase
       .from('work_sessions')
       .insert([{
@@ -206,6 +249,9 @@ export const EmployeeProvider = ({ children }) => {
       
     if (!error && data) {
       setWorkSession(data);
+    } else if (error) {
+      console.error('Error checking in:', error);
+      throw error;
     }
   };
 
@@ -220,6 +266,8 @@ export const EmployeeProvider = ({ children }) => {
       
     if (!error && data) {
       setWorkSession(data);
+    } else if (error) {
+      console.error('Error checking out:', error);
     }
   };
 

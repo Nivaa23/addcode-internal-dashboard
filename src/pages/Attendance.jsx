@@ -13,7 +13,7 @@ export default function Attendance() {
   const handleToggleCheckIn = () => {
     if (isSessionActive) {
       checkOut();
-    } else if (!workSession) {
+    } else {
       checkIn();
     }
   };

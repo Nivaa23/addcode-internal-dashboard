@@ -62,7 +62,7 @@ export default function Dashboard() {
   const handleCheckInToggle = () => {
     if (isSessionActive) {
       checkOut();
-    } else if (!workSession) {
+    } else {
       checkIn();
     }
   };
@@ -153,10 +153,9 @@ export default function Dashboard() {
             <div className="pt-2">
               <button
                 onClick={handleCheckInToggle}
-                disabled={workSession && workSession.check_out_time}
-                className={`w-full py-2.5 px-4 rounded-md text-xs font-semibold transition-colors shadow-xs focus:outline-none flex items-center justify-center gap-1.5 ${isSessionActive ? 'bg-brand-600 hover:bg-brand-700 text-white cursor-pointer' : (workSession && workSession.check_out_time ? 'bg-slate-200 text-slate-500 cursor-not-allowed' : 'bg-brand-600 hover:bg-brand-700 text-white cursor-pointer')}`}
+                className="w-full py-2.5 px-4 rounded-md text-xs font-semibold transition-colors shadow-xs focus:outline-none flex items-center justify-center gap-1.5 bg-brand-600 hover:bg-brand-700 text-white cursor-pointer"
               >
-                {isSessionActive ? 'Check Out' : (workSession && workSession.check_out_time ? 'Session Ended' : 'Check In')}
+                {isSessionActive ? 'Check Out' : 'Check In'}
               </button>
             </div>
           </div>
