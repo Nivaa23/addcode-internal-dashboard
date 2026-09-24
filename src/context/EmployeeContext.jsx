@@ -218,8 +218,9 @@ export const EmployeeProvider = ({ children }) => {
   };
 
   const checkIn = async () => {
-    if (!currentUser || !currentUser.id) {
-      console.warn('Cannot check in: currentUser or currentUser.id is not available', currentUser);
+    const employeeUuid = currentUser?.id;
+    if (!currentUser || !employeeUuid) {
+      console.warn('Cannot check in: currentUser or employee UUID is not available', currentUser);
       throw new Error('Employee identity not resolved. Cannot check in.');
     }
 
@@ -227,7 +228,7 @@ export const EmployeeProvider = ({ children }) => {
     const { data: existingActive } = await supabase
       .from('work_sessions')
       .select('*')
-      .eq('employee_id', currentUser.id)
+      .eq('employee_id', employeeUuid)
       .is('check_out_time', null)
       .maybeSingle();
 
@@ -240,7 +241,7 @@ export const EmployeeProvider = ({ children }) => {
     const { data, error } = await supabase
       .from('work_sessions')
       .insert([{
-        employee_id: currentUser.id,
+        employee_id: employeeUuid,
         check_in_time: new Date().toISOString(),
         session_date: new Date().toISOString().split('T')[0]
       }])
