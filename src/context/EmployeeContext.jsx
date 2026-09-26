@@ -63,8 +63,13 @@ export const EmployeeProvider = ({ children }) => {
           .single();
 
         if (!error && employeeData) {
+          const employeeUuid = employeeData.id;
+
           setCurrentUser({
             ...employeeData,
+            id: employeeData.id,
+            employee_id: employeeData.employee_id,
+            auth_user_id: employeeData.auth_user_id,
             name: employeeData.full_name || employeeData.name || session.user.email?.split('@')[0],
             role: employeeData.designation || employeeData.role || 'Employee'
           });
@@ -74,7 +79,7 @@ export const EmployeeProvider = ({ children }) => {
           const { data: activeSession } = await supabase
             .from('work_sessions')
             .select('*')
-            .eq('employee_id', employeeData.id)
+            .eq('employee_id', employeeUuid)
             .is('check_out_time', null)
             .maybeSingle();
 
@@ -86,7 +91,7 @@ export const EmployeeProvider = ({ children }) => {
             const { data: sessionData } = await supabase
               .from('work_sessions')
               .select('*')
-              .eq('employee_id', employeeData.id)
+              .eq('employee_id', employeeUuid)
               .eq('session_date', today)
               .order('check_in_time', { ascending: false })
               .limit(1)
