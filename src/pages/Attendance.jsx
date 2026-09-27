@@ -8,7 +8,7 @@ import { useEmployees } from '../context/EmployeeContext';
 export default function Attendance() {
 
   const { workSession, checkIn, checkOut } = useEmployees();
-  const isSessionActive = workSession && !workSession.check_out_time;
+  const isSessionActive = Boolean(workSession && workSession.clock_in && !workSession.clock_out);
 
   const handleToggleCheckIn = () => {
     if (isSessionActive) {
@@ -20,13 +20,13 @@ export default function Attendance() {
 
   const displaySessions = [];
   if (workSession) {
-    const start = new Date(workSession.check_in_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const start = new Date(workSession.clock_in).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     let end = 'Current';
     let duration = 'Live';
     
-    if (workSession.check_out_time) {
-      end = new Date(workSession.check_out_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      const elapsed = Math.floor((new Date(workSession.check_out_time).getTime() - new Date(workSession.check_in_time).getTime()) / 1000);
+    if (workSession.clock_out) {
+      end = new Date(workSession.clock_out).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const elapsed = Math.floor((new Date(workSession.clock_out).getTime() - new Date(workSession.clock_in).getTime()) / 1000);
       duration = `${Math.floor(elapsed / 3600)}h ${Math.floor((elapsed % 3600) / 60)}m`;
     }
     
@@ -106,14 +106,14 @@ export default function Attendance() {
           </span>
           <button
             onClick={handleToggleCheckIn}
-            disabled={workSession && workSession.check_out_time}
+            disabled={workSession && workSession.clock_out}
             className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-semibold shadow-xs transition-colors ${isSessionActive
                 ? 'bg-slate-900 hover:bg-slate-800 text-white cursor-pointer'
-                : (workSession && workSession.check_out_time ? 'bg-slate-200 text-slate-500 cursor-not-allowed' : 'bg-brand-600 hover:bg-brand-700 text-white cursor-pointer')
+                : (workSession && workSession.clock_out ? 'bg-slate-200 text-slate-500 cursor-not-allowed' : 'bg-brand-600 hover:bg-brand-700 text-white cursor-pointer')
               }`}
           >
             {isSessionActive ? <LogOut className="w-3.5 h-3.5" /> : <LogIn className="w-3.5 h-3.5" />}
-            <span>{isSessionActive ? 'Check Out' : (workSession && workSession.check_out_time ? 'Session Ended' : 'Check In')}</span>
+            <span>{isSessionActive ? 'Check Out' : (workSession && workSession.clock_out ? 'Session Ended' : 'Check In')}</span>
           </button>
         </div>
       </div>

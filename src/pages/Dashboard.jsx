@@ -16,16 +16,24 @@ export default function Dashboard() {
 
   useEffect(() => {
     let interval = null;
-    if (workSession && !workSession.check_out_time) {
-      const start = new Date(workSession.check_in_time).getTime();
-      setElapsedSeconds(Math.floor((Date.now() - start) / 1000));
-      interval = setInterval(() => {
-        setElapsedSeconds(Math.floor((Date.now() - start) / 1000));
-      }, 1000);
-    } else if (workSession && workSession.check_out_time) {
-      const start = new Date(workSession.check_in_time).getTime();
-      const end = new Date(workSession.check_out_time).getTime();
-      setElapsedSeconds(Math.floor((end - start) / 1000));
+    if (workSession && workSession.clock_in && !workSession.clock_out) {
+      const startTime = new Date(workSession.clock_in).getTime();
+      if (!isNaN(startTime)) {
+        setElapsedSeconds(Math.max(0, Math.floor((Date.now() - startTime) / 1000)));
+        interval = setInterval(() => {
+          setElapsedSeconds(Math.max(0, Math.floor((Date.now() - startTime) / 1000)));
+        }, 1000);
+      } else {
+        setElapsedSeconds(0);
+      }
+    } else if (workSession && workSession.clock_in && workSession.clock_out) {
+      const startTime = new Date(workSession.clock_in).getTime();
+      const endTime = new Date(workSession.clock_out).getTime();
+      if (!isNaN(startTime) && !isNaN(endTime)) {
+        setElapsedSeconds(Math.max(0, Math.floor((endTime - startTime) / 1000)));
+      } else {
+        setElapsedSeconds(0);
+      }
     } else {
       setElapsedSeconds(0);
     }
@@ -34,30 +42,32 @@ export default function Dashboard() {
 
   // Format seconds to HH:MM:SS
   const formatTimer = (totalSec) => {
-    const hrs = Math.floor(totalSec / 3600);
-    const mins = Math.floor((totalSec % 3600) / 60);
-    const secs = totalSec % 60;
+    const validSec = typeof totalSec === 'number' && !isNaN(totalSec) && totalSec >= 0 ? totalSec : 0;
+    const hrs = Math.floor(validSec / 3600);
+    const mins = Math.floor((validSec % 3600) / 60);
+    const secs = validSec % 60;
     const pad = (num) => String(num).padStart(2, '0');
     return `${pad(hrs)}:${pad(mins)}:${pad(secs)}`;
   };
 
   // Format work hours summary (e.g. "4h 35m")
   const formatWorkHoursSummary = (totalSec) => {
-    const hrs = Math.floor(totalSec / 3600);
-    const mins = Math.floor((totalSec % 3600) / 60);
+    const validSec = typeof totalSec === 'number' && !isNaN(totalSec) && totalSec >= 0 ? totalSec : 0;
+    const hrs = Math.floor(validSec / 3600);
+    const mins = Math.floor((validSec % 3600) / 60);
     return `${hrs}h ${mins}m`;
   };
 
 
-  const displayCheckInTime = workSession 
-    ? new Date(workSession.check_in_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  const displayCheckInTime = workSession && workSession.clock_in && !isNaN(new Date(workSession.clock_in).getTime())
+    ? new Date(workSession.clock_in).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     : '--:--';
     
-  const displayCheckOutTime = workSession && workSession.check_out_time
-    ? new Date(workSession.check_out_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+  const displayCheckOutTime = workSession && workSession.clock_out && !isNaN(new Date(workSession.clock_out).getTime())
+    ? new Date(workSession.clock_out).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     : '';
 
-  const isSessionActive = workSession && !workSession.check_out_time;
+  const isSessionActive = Boolean(workSession && workSession.clock_in && !workSession.clock_out);
 
   const handleCheckInToggle = () => {
     if (isSessionActive) {

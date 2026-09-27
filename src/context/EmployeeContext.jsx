@@ -75,29 +75,13 @@ export const EmployeeProvider = ({ children }) => {
           });
           setMustChangePassword(employeeData.must_change_password);
 
-          // Fetch active work session first (where check_out_time IS NULL)
-          const { data: activeSession } = await supabase
-            .from('work_sessions')
-            .select('*')
-            .eq('employee_id', employeeUuid)
-            .is('check_out_time', null)
-            .maybeSingle();
-
-          if (activeSession) {
-            setWorkSession(activeSession);
+          // Restore active work session via RPC
+          const { data: activeSession, error: sessionError } = await supabase.rpc('get_active_work_session');
+          if (sessionError) {
+            console.error('Error restoring active work session:', sessionError);
+            setWorkSession(null);
           } else {
-            // Otherwise fetch today's latest session (completed)
-            const today = new Date().toISOString().split('T')[0];
-            const { data: sessionData } = await supabase
-              .from('work_sessions')
-              .select('*')
-              .eq('employee_id', employeeUuid)
-              .eq('session_date', today)
-              .order('check_in_time', { ascending: false })
-              .limit(1)
-              .maybeSingle();
-              
-            setWorkSession(sessionData || null);
+            setWorkSession(normalizeWorkSession(activeSession));
           }
         } else {
           setCurrentUser({
@@ -124,6 +108,23 @@ export const EmployeeProvider = ({ children }) => {
       setIsAuthenticated(false);
       setCurrentUser(null);
     }
+  };
+
+  const normalizeWorkSession = (data) => {
+    if (!data) return null;
+    const raw = Array.isArray(data) ? (data.length > 0 ? data[0] : null) : (typeof data === 'object' ? data : null);
+    if (!raw || !raw.id) return null;
+
+    const clock_in = raw.clock_in ?? raw.check_in_time ?? null;
+    const clock_out = raw.clock_out ?? raw.check_out_time ?? null;
+
+    if (!clock_in) return null;
+
+    return {
+      ...raw,
+      clock_in,
+      clock_out
+    };
   };
 
   useEffect(() => {
@@ -223,58 +224,30 @@ export const EmployeeProvider = ({ children }) => {
   };
 
   const checkIn = async () => {
-    const employeeUuid = currentUser?.id;
-    if (!currentUser || !employeeUuid) {
-      console.warn('Cannot check in: currentUser or employee UUID is not available', currentUser);
-      throw new Error('Employee identity not resolved. Cannot check in.');
-    }
-
-    // Check for existing active session (prevent duplicate active sessions)
-    const { data: existingActive } = await supabase
-      .from('work_sessions')
-      .select('*')
-      .eq('employee_id', employeeUuid)
-      .is('check_out_time', null)
-      .maybeSingle();
-
-    if (existingActive) {
-      console.log('Active work session already exists:', existingActive);
-      setWorkSession(existingActive);
-      return;
-    }
-
-    const { data, error } = await supabase
-      .from('work_sessions')
-      .insert([{
-        employee_id: employeeUuid,
-        check_in_time: new Date().toISOString(),
-        session_date: new Date().toISOString().split('T')[0]
-      }])
-      .select()
-      .single();
-      
-    if (!error && data) {
-      setWorkSession(data);
-    } else if (error) {
+    const { data, error } = await supabase.rpc('check_in');
+    if (error) {
       console.error('Error checking in:', error);
       throw error;
     }
+    const session = normalizeWorkSession(data);
+    if (!session) {
+      throw new Error('Check In succeeded but no work session was returned.');
+    }
+    setWorkSession(session);
   };
 
   const checkOut = async () => {
-    if (!workSession) return;
-    const { data, error } = await supabase
-      .from('work_sessions')
-      .update({ check_out_time: new Date().toISOString() })
-      .eq('id', workSession.id)
-      .select()
-      .single();
-      
-    if (!error && data) {
-      setWorkSession(data);
-    } else if (error) {
+    const { data, error } = await supabase.rpc('check_out');
+    if (error) {
       console.error('Error checking out:', error);
+      if (error.message?.includes('No active work session') || error.code === 'P0001') {
+        setWorkSession(null);
+        return;
+      }
+      throw error;
     }
+    const session = normalizeWorkSession(data);
+    setWorkSession(session);
   };
 
   const updateStats = useCallback((updatedEmployees) => {
