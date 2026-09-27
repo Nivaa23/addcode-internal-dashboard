@@ -1,26 +1,72 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Users,
   Plus,
-  X
+  X,
+  Loader2
 } from 'lucide-react';
-import { mockProjects, mockTasks } from '../data/mockTasksAndProjects';
+import { mockTasks } from '../data/mockTasksAndProjects';
 import { useEmployees } from '../context/EmployeeContext';
+import { supabase } from '../lib/supabase';
 
 export default function Projects() {
   const { currentUser } = useEmployees();
-  const [projectsList, setProjectsList] = useState(mockProjects);
+  const [projectsList, setProjectsList] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [selectedProject, setSelectedProject] = useState(null);
   const [taskFilterTab, setTaskFilterTab] = useState('all');
+
+  useEffect(() => {
+    let mounted = true;
+    const fetchProjects = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const { data, error: fetchErr } = await supabase
+          .from('projects')
+          .select('id, name, description, status, priority, start_date, due_date, created_by, project_manager_id, created_at, updated_at')
+          .order('created_at', { ascending: false });
+
+        if (fetchErr) {
+          if (mounted) setError(fetchErr.message);
+        } else if (mounted) {
+          const mapped = (data || []).map(p => ({
+            ...p,
+            id: p.id,
+            name: p.name || 'Unnamed Project',
+            description: p.description || 'No description provided.',
+            status: p.status || 'Planning',
+            priority: p.priority || 'Medium',
+            startDate: p.start_date || 'N/A',
+            expectedCompletion: p.due_date || 'N/A',
+            projectLead: p.project_manager_id ? `ID: ${p.project_manager_id}` : 'Unassigned',
+            leadAvatar: 'PM',
+            progress: 0,
+            teamSize: 0
+          }));
+          setProjectsList(mapped);
+        }
+      } catch (err) {
+        if (mounted) setError(err.message || 'Failed to fetch projects');
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    };
+
+    fetchProjects();
+    return () => { mounted = false; };
+  }, []);
 
   const getStatusBadge = (status) => {
     switch (status) {
       case 'Completed':
         return <span className="px-2 py-0.5 text-[10px] font-semibold rounded bg-emerald-50 text-emerald-700 border border-emerald-200">Completed</span>;
       case 'In Progress':
+      case 'Active Development':
         return <span className="px-2 py-0.5 text-[10px] font-semibold rounded bg-blue-50 text-blue-700 border border-blue-200">In Progress</span>;
       default:
-        return <span className="px-2 py-0.5 text-[10px] font-semibold rounded bg-slate-100 text-slate-600 border border-slate-200">Planning</span>;
+        return <span className="px-2 py-0.5 text-[10px] font-semibold rounded bg-slate-100 text-slate-600 border border-slate-200">{status || 'Planning'}</span>;
     }
   };
 
@@ -61,7 +107,7 @@ export default function Projects() {
               description: 'Designing high-performance platform subsystem module.',
               status: 'In Progress',
               progress: 20,
-              projectLead: currentUser?.name,
+              projectLead: currentUser?.name || 'Unassigned',
               leadRole: currentUser?.role || 'Lead',
               leadAvatar: currentUser?.name ? currentUser.name[0].toUpperCase() : 'U',
               teamSize: 4,
@@ -80,64 +126,88 @@ export default function Projects() {
         </button>
       </div>
 
+      {/* Loading State */}
+      {loading && (
+        <div className="py-16 flex items-center justify-center text-slate-500">
+          <Loader2 className="w-8 h-8 animate-spin text-brand-600 mr-2" />
+          <span className="text-xs font-semibold">Loading projects...</span>
+        </div>
+      )}
+
+      {/* Error State */}
+      {error && (
+        <div className="p-4 rounded border border-red-200 bg-red-50 text-red-700 text-xs font-semibold">
+          Failed to load projects: {error}
+        </div>
+      )}
+
+      {/* Empty State */}
+      {!loading && !error && projectsList.length === 0 && (
+        <div className="py-16 border border-dashed border-slate-200 rounded text-center text-xs text-slate-500 bg-slate-50">
+          No engineering projects found in database.
+        </div>
+      )}
+
       {/* Projects Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {projectsList.map((project) => (
-          <div
-            key={project.id}
-            onClick={() => setSelectedProject(project)}
-            className="bg-white border border-slate-200 rounded p-4 shadow-xs hover:border-slate-300 transition-colors flex flex-col justify-between space-y-4 cursor-pointer"
-          >
-            {/* Header info */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-mono font-bold text-slate-400">{project.id}</span>
-                {getStatusBadge(project.status)}
-              </div>
-
-              <div>
-                <h3 className="text-sm font-bold text-slate-900 leading-tight">
-                  {project.name}
-                </h3>
-                <p className="text-xs text-slate-500 font-medium leading-normal mt-1 line-clamp-2">
-                  {project.description}
-                </p>
-              </div>
-            </div>
-
-            {/* Progress & Lead */}
-            <div className="space-y-3 pt-2">
-              <div className="space-y-1">
-                <div className="flex justify-between text-xs font-semibold">
-                  <span className="text-slate-500">Progress</span>
-                  <span className="text-slate-900 font-bold">{project.progress}%</span>
+      {!loading && !error && projectsList.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {projectsList.map((project) => (
+            <div
+              key={project.id}
+              onClick={() => setSelectedProject(project)}
+              className="bg-white border border-slate-200 rounded p-4 shadow-xs hover:border-slate-300 transition-colors flex flex-col justify-between space-y-4 cursor-pointer"
+            >
+              {/* Header info */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-mono font-bold text-slate-400">{project.id}</span>
+                  {getStatusBadge(project.status)}
                 </div>
-                <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
-                  <div style={{ width: `${project.progress}%` }} className="bg-slate-800 h-1.5 rounded-full" />
+
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 leading-tight">
+                    {project.name}
+                  </h3>
+                  <p className="text-xs text-slate-500 font-medium leading-normal mt-1 line-clamp-2">
+                    {project.description}
+                  </p>
                 </div>
               </div>
 
-              <div className="flex items-center justify-between p-2 bg-slate-50 rounded border border-slate-100 text-xs">
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center font-bold text-[10px]">
-                    {project.leadAvatar || project.projectLead.slice(0, 2).toUpperCase()}
+              {/* Progress & Lead */}
+              <div className="space-y-3 pt-2">
+                <div className="space-y-1">
+                  <div className="flex justify-between text-xs font-semibold">
+                    <span className="text-slate-500">Progress</span>
+                    <span className="text-slate-900 font-bold">{project.progress}%</span>
                   </div>
-                  <span className="font-semibold text-slate-800">{project.projectLead}</span>
+                  <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                    <div style={{ width: `${project.progress}%` }} className="bg-slate-800 h-1.5 rounded-full" />
+                  </div>
                 </div>
-                <span className="text-[10px] text-slate-400 font-medium">Lead</span>
+
+                <div className="flex items-center justify-between p-2 bg-slate-50 rounded border border-slate-100 text-xs">
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center font-bold text-[10px]">
+                      {project.leadAvatar || (project.projectLead ? project.projectLead.slice(0, 2).toUpperCase() : 'PM')}
+                    </div>
+                    <span className="font-semibold text-slate-800">{project.projectLead}</span>
+                  </div>
+                  <span className="text-[10px] text-slate-400 font-medium">Lead</span>
+                </div>
+              </div>
+
+              {/* Footer Specs */}
+              <div className="flex items-center justify-between pt-3 border-t border-slate-100 text-xs text-slate-500">
+                <span className="flex items-center gap-1">
+                  <Users className="w-3.5 h-3.5 text-slate-400" /> {project.teamSize} Members
+                </span>
+                <span>Due: {project.expectedCompletion}</span>
               </div>
             </div>
-
-            {/* Footer Specs */}
-            <div className="flex items-center justify-between pt-3 border-t border-slate-100 text-xs text-slate-500">
-              <span className="flex items-center gap-1">
-                <Users className="w-3.5 h-3.5 text-slate-400" /> {project.teamSize} Members
-              </span>
-              <span>Due: {project.expectedCompletion}</span>
-            </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       {/* PROJECT DETAILS MODAL */}
       {selectedProject && (
