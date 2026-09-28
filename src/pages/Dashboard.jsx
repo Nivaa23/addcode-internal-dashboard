@@ -5,40 +5,79 @@ import {
   CalendarDays,
   CheckSquare,
   Calendar as CalendarIcon,
-  CheckCircle2
+  CheckCircle2,
+  Coffee
 } from 'lucide-react';
 import { useEmployees } from '../context/EmployeeContext';
 
 export default function Dashboard() {
-  const { activities, currentUser, workSession, checkIn, checkOut } = useEmployees();
+  const { activities, currentUser, workSession, activeBreak, checkIn, checkOut, startBreak, resumeBreak } = useEmployees();
 
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [breakElapsedSeconds, setBreakElapsedSeconds] = useState(0);
+  const [isActionLoading, setIsActionLoading] = useState(false);
+
+  const isSessionActive = Boolean(workSession && workSession.clock_in && !workSession.clock_out);
+  const isOnBreak = Boolean(activeBreak && activeBreak.started_at && !activeBreak.ended_at);
 
   useEffect(() => {
     let interval = null;
-    if (workSession && workSession.clock_in && !workSession.clock_out) {
-      const startTime = new Date(workSession.clock_in).getTime();
-      if (!isNaN(startTime)) {
-        setElapsedSeconds(Math.max(0, Math.floor((Date.now() - startTime) / 1000)));
-        interval = setInterval(() => {
-          setElapsedSeconds(Math.max(0, Math.floor((Date.now() - startTime) / 1000)));
-        }, 1000);
+
+    const updateTimers = () => {
+      if (workSession && workSession.clock_in && !workSession.clock_out) {
+        const startTime = new Date(workSession.clock_in).getTime();
+        if (!isNaN(startTime)) {
+          if (activeBreak && activeBreak.started_at && !activeBreak.ended_at) {
+            // Employee is ON BREAK: freeze work timer, calculate break timer
+            const breakStart = new Date(activeBreak.started_at).getTime();
+            if (!isNaN(breakStart)) {
+              setBreakElapsedSeconds(Math.max(0, Math.floor((Date.now() - breakStart) / 1000)));
+              setElapsedSeconds(Math.max(0, Math.floor((breakStart - startTime) / 1000)));
+            }
+          } else {
+            // Employee is WORKING: calculate work timer excluding any completed break duration
+            let totalBreakSec = 0;
+            if (activeBreak && activeBreak.started_at && activeBreak.ended_at) {
+              const bStart = new Date(activeBreak.started_at).getTime();
+              const bEnd = new Date(activeBreak.ended_at).getTime();
+              if (!isNaN(bStart) && !isNaN(bEnd)) {
+                totalBreakSec = Math.max(0, Math.floor((bEnd - bStart) / 1000));
+              }
+            }
+            setBreakElapsedSeconds(totalBreakSec);
+            setElapsedSeconds(Math.max(0, Math.floor((Date.now() - startTime) / 1000) - totalBreakSec));
+          }
+        } else {
+          setElapsedSeconds(0);
+          setBreakElapsedSeconds(0);
+        }
+      } else if (workSession && workSession.clock_in && workSession.clock_out) {
+        const startTime = new Date(workSession.clock_in).getTime();
+        const endTime = new Date(workSession.clock_out).getTime();
+        let totalBreakSec = 0;
+        if (activeBreak && activeBreak.started_at && activeBreak.ended_at) {
+          const bStart = new Date(activeBreak.started_at).getTime();
+          const bEnd = new Date(activeBreak.ended_at).getTime();
+          if (!isNaN(bStart) && !isNaN(bEnd)) {
+            totalBreakSec = Math.max(0, Math.floor((bEnd - bStart) / 1000));
+          }
+        }
+        setBreakElapsedSeconds(totalBreakSec);
+        if (!isNaN(startTime) && !isNaN(endTime)) {
+          setElapsedSeconds(Math.max(0, Math.floor((endTime - startTime) / 1000) - totalBreakSec));
+        } else {
+          setElapsedSeconds(0);
+        }
       } else {
         setElapsedSeconds(0);
+        setBreakElapsedSeconds(0);
       }
-    } else if (workSession && workSession.clock_in && workSession.clock_out) {
-      const startTime = new Date(workSession.clock_in).getTime();
-      const endTime = new Date(workSession.clock_out).getTime();
-      if (!isNaN(startTime) && !isNaN(endTime)) {
-        setElapsedSeconds(Math.max(0, Math.floor((endTime - startTime) / 1000)));
-      } else {
-        setElapsedSeconds(0);
-      }
-    } else {
-      setElapsedSeconds(0);
-    }
+    };
+
+    updateTimers();
+    interval = setInterval(updateTimers, 1000);
     return () => clearInterval(interval);
-  }, [workSession]);
+  }, [workSession, activeBreak]);
 
   // Format seconds to HH:MM:SS
   const formatTimer = (totalSec) => {
@@ -58,7 +97,6 @@ export default function Dashboard() {
     return `${hrs}h ${mins}m`;
   };
 
-
   const displayCheckInTime = workSession && workSession.clock_in && !isNaN(new Date(workSession.clock_in).getTime())
     ? new Date(workSession.clock_in).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     : '--:--';
@@ -67,13 +105,55 @@ export default function Dashboard() {
     ? new Date(workSession.clock_out).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     : '';
 
-  const isSessionActive = Boolean(workSession && workSession.clock_in && !workSession.clock_out);
+  const handleCheckIn = async () => {
+    if (isActionLoading) return;
+    setIsActionLoading(true);
+    try {
+      await checkIn();
+    } catch (err) {
+      console.error('Failed to check in:', err);
+      alert(err.message || 'Failed to check in.');
+    } finally {
+      setIsActionLoading(false);
+    }
+  };
 
-  const handleCheckInToggle = () => {
-    if (isSessionActive) {
-      checkOut();
-    } else {
-      checkIn();
+  const handleCheckOut = async () => {
+    if (isActionLoading) return;
+    setIsActionLoading(true);
+    try {
+      await checkOut();
+    } catch (err) {
+      console.error('Failed to check out:', err);
+      alert(err.message || 'Failed to check out.');
+    } finally {
+      setIsActionLoading(false);
+    }
+  };
+
+  const handleStartBreak = async () => {
+    if (isActionLoading) return;
+    setIsActionLoading(true);
+    try {
+      await startBreak();
+    } catch (err) {
+      console.error('Failed to start break:', err);
+      alert(err.message || 'Failed to start break.');
+    } finally {
+      setIsActionLoading(false);
+    }
+  };
+
+  const handleResumeBreak = async () => {
+    if (isActionLoading) return;
+    setIsActionLoading(true);
+    try {
+      await resumeBreak();
+    } catch (err) {
+      console.error('Failed to resume break:', err);
+      alert(err.message || 'Failed to resume break.');
+    } finally {
+      setIsActionLoading(false);
     }
   };
 
@@ -155,18 +235,52 @@ export default function Dashboard() {
               <span className="text-xs font-semibold text-slate-500 block">Today's Check-In</span>
               <div className="flex items-center justify-between">
                 <span className="text-2xl font-bold text-slate-900 tracking-tight">{displayCheckInTime}</span>
-                <span className={`text-[10px] font-bold uppercase px-2.5 py-1 rounded-full ${isSessionActive ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-500'}`}>
-                  {isSessionActive ? 'Logged In' : 'Logged Out'}
+                <span className={`text-[10px] font-bold uppercase px-2.5 py-1 rounded-full ${
+                  isSessionActive
+                    ? (isOnBreak ? 'bg-amber-100 text-amber-800 border border-amber-200' : 'bg-emerald-100 text-emerald-800')
+                    : 'bg-slate-100 text-slate-500'
+                }`}>
+                  {isSessionActive ? (isOnBreak ? 'On Break' : 'Logged In') : 'Logged Out'}
                 </span>
               </div>
             </div>
             <div className="pt-2">
-              <button
-                onClick={handleCheckInToggle}
-                className="w-full py-2.5 px-4 rounded-md text-xs font-semibold transition-colors shadow-xs focus:outline-none flex items-center justify-center gap-1.5 bg-brand-600 hover:bg-brand-700 text-white cursor-pointer"
-              >
-                {isSessionActive ? 'Check Out' : 'Check In'}
-              </button>
+              {!isSessionActive ? (
+                <button
+                  onClick={handleCheckIn}
+                  disabled={isActionLoading}
+                  className="w-full py-2.5 px-4 rounded-md text-xs font-semibold transition-colors shadow-xs focus:outline-none flex items-center justify-center gap-1.5 bg-brand-600 hover:bg-brand-700 text-white cursor-pointer disabled:opacity-50"
+                >
+                  <span>{isActionLoading ? 'Checking in...' : 'Check In'}</span>
+                </button>
+              ) : isOnBreak ? (
+                <button
+                  onClick={handleResumeBreak}
+                  disabled={isActionLoading}
+                  className="w-full py-2.5 px-4 rounded-md text-xs font-semibold transition-colors shadow-xs focus:outline-none flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer disabled:opacity-50"
+                >
+                  <Coffee className="w-3.5 h-3.5" />
+                  <span>{isActionLoading ? 'Resuming...' : 'Resume'}</span>
+                </button>
+              ) : (
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={handleStartBreak}
+                    disabled={isActionLoading}
+                    className="py-2.5 px-3 rounded-md text-xs font-semibold transition-colors shadow-xs focus:outline-none flex items-center justify-center gap-1.5 bg-amber-600 hover:bg-amber-700 text-white cursor-pointer disabled:opacity-50"
+                  >
+                    <Coffee className="w-3.5 h-3.5" />
+                    <span>{isActionLoading ? 'Starting...' : 'Break'}</span>
+                  </button>
+                  <button
+                    onClick={handleCheckOut}
+                    disabled={isActionLoading}
+                    className="py-2.5 px-3 rounded-md text-xs font-semibold transition-colors shadow-xs focus:outline-none flex items-center justify-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white cursor-pointer disabled:opacity-50"
+                  >
+                    <span>{isActionLoading ? 'Checking out...' : 'Check Out'}</span>
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 
@@ -184,17 +298,26 @@ export default function Dashboard() {
               <div className="p-3 bg-slate-50 border border-slate-200 rounded-md flex items-center justify-between">
                 <div>
                   <div className="text-xl font-bold font-mono tracking-tight text-slate-900 leading-none">
-                    {formatTimer(elapsedSeconds)}
+                    {isOnBreak ? formatTimer(breakElapsedSeconds) : formatTimer(elapsedSeconds)}
                   </div>
                   <span className="text-[11px] text-slate-500 font-medium block mt-1">
-                    {isSessionActive ? `Working since ${displayCheckInTime}` : (workSession ? `Session ended at ${displayCheckOutTime}` : 'Not checked in yet')}
+                    {isOnBreak
+                      ? `Break duration: ${formatTimer(breakElapsedSeconds)}`
+                      : (isSessionActive ? `Working since ${displayCheckInTime}` : (workSession ? `Session ended at ${displayCheckOutTime}` : 'Not checked in yet'))}
                   </span>
                 </div>
                 <div className="text-right">
-                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase border ${isSessionActive ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-100 text-slate-500 border-slate-200'
-                    }`}>
-                    <span className={`w-1.5 h-1.5 rounded-full ${isSessionActive ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`}></span>
-                    {isSessionActive ? 'Live' : 'Ended'}
+                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase border ${
+                    isSessionActive
+                      ? (isOnBreak ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200')
+                      : 'bg-slate-100 text-slate-500 border-slate-200'
+                  }`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${
+                      isSessionActive
+                        ? (isOnBreak ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500 animate-pulse')
+                        : 'bg-slate-400'
+                    }`}></span>
+                    {isSessionActive ? (isOnBreak ? 'On Break' : 'Live') : 'Ended'}
                   </span>
                 </div>
               </div>

@@ -49,6 +49,14 @@ export const EmployeeProvider = ({ children }) => {
   const [currentUser, setCurrentUser] = useState(null);
   const [mustChangePassword, setMustChangePassword] = useState(false);
   const [workSession, setWorkSession] = useState(null);
+  const [activeBreak, setActiveBreak] = useState(null);
+
+  const normalizeBreakSession = (data) => {
+    if (!data) return null;
+    const raw = Array.isArray(data) ? (data.length > 0 ? data[0] : null) : (typeof data === 'object' ? data : null);
+    if (!raw || !raw.id) return null;
+    return raw;
+  };
 
   const handleSession = async (session) => {
     if (session?.user) {
@@ -63,8 +71,6 @@ export const EmployeeProvider = ({ children }) => {
           .single();
 
         if (!error && employeeData) {
-          const employeeUuid = employeeData.id;
-
           setCurrentUser({
             ...employeeData,
             id: employeeData.id,
@@ -83,6 +89,15 @@ export const EmployeeProvider = ({ children }) => {
           } else {
             setWorkSession(normalizeWorkSession(activeSession));
           }
+
+          // Restore active break session via RPC
+          const { data: activeBreakData, error: breakError } = await supabase.rpc('get_active_break');
+          if (breakError) {
+            console.error('Error restoring active break:', breakError);
+            setActiveBreak(null);
+          } else {
+            setActiveBreak(normalizeBreakSession(activeBreakData));
+          }
         } else {
           setCurrentUser({
             id: null,
@@ -92,6 +107,8 @@ export const EmployeeProvider = ({ children }) => {
             email: session.user.email
           });
           setMustChangePassword(false);
+          setWorkSession(null);
+          setActiveBreak(null);
         }
       } catch {
         setCurrentUser({
@@ -102,11 +119,15 @@ export const EmployeeProvider = ({ children }) => {
           email: session.user.email
         });
         setMustChangePassword(false);
+        setWorkSession(null);
+        setActiveBreak(null);
       }
     } else {
       setSupabaseUser(null);
       setIsAuthenticated(false);
       setCurrentUser(null);
+      setWorkSession(null);
+      setActiveBreak(null);
     }
   };
 
@@ -234,6 +255,7 @@ export const EmployeeProvider = ({ children }) => {
       throw new Error('Check In succeeded but no work session was returned.');
     }
     setWorkSession(session);
+    setActiveBreak(null);
   };
 
   const checkOut = async () => {
@@ -242,12 +264,39 @@ export const EmployeeProvider = ({ children }) => {
       console.error('Error checking out:', error);
       if (error.message?.includes('No active work session') || error.code === 'P0001') {
         setWorkSession(null);
+        setActiveBreak(null);
         return;
       }
       throw error;
     }
     const session = normalizeWorkSession(data);
     setWorkSession(session);
+    setActiveBreak(null);
+  };
+
+  const startBreak = async () => {
+    const { data, error } = await supabase.rpc('start_break');
+    if (error) {
+      console.error('Error starting break:', error);
+      throw error;
+    }
+    const session = normalizeBreakSession(data);
+    if (!session) {
+      throw new Error('Start break succeeded but no break session was returned.');
+    }
+    setActiveBreak(session);
+    return session;
+  };
+
+  const resumeBreak = async () => {
+    const { data, error } = await supabase.rpc('resume_break');
+    if (error) {
+      console.error('Error resuming break:', error);
+      throw error;
+    }
+    const session = normalizeBreakSession(data);
+    setActiveBreak(session);
+    return session;
   };
 
   const updateStats = useCallback((updatedEmployees) => {
@@ -458,8 +507,11 @@ export const EmployeeProvider = ({ children }) => {
       currentUser,
       supabaseUser,
       workSession,
+      activeBreak,
       checkIn,
       checkOut,
+      startBreak,
+      resumeBreak,
       login,
       signup,
       logout,

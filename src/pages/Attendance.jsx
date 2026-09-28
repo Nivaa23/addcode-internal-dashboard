@@ -1,20 +1,68 @@
 import React, { useState } from 'react';
 import {
   LogIn,
-  LogOut
+  LogOut,
+  Coffee
 } from 'lucide-react';
 import { useEmployees } from '../context/EmployeeContext';
 
 export default function Attendance() {
 
-  const { workSession, checkIn, checkOut } = useEmployees();
+  const { workSession, activeBreak, checkIn, checkOut, startBreak, resumeBreak } = useEmployees();
   const isSessionActive = Boolean(workSession && workSession.clock_in && !workSession.clock_out);
+  const isOnBreak = Boolean(activeBreak && activeBreak.started_at && !activeBreak.ended_at);
 
-  const handleToggleCheckIn = () => {
-    if (isSessionActive) {
-      checkOut();
-    } else {
-      checkIn();
+  const [isActionLoading, setIsActionLoading] = useState(false);
+
+  const handleCheckIn = async () => {
+    if (isActionLoading) return;
+    setIsActionLoading(true);
+    try {
+      await checkIn();
+    } catch (err) {
+      console.error('Failed to check in:', err);
+      alert(err.message || 'Failed to check in.');
+    } finally {
+      setIsActionLoading(false);
+    }
+  };
+
+  const handleCheckOut = async () => {
+    if (isActionLoading) return;
+    setIsActionLoading(true);
+    try {
+      await checkOut();
+    } catch (err) {
+      console.error('Failed to check out:', err);
+      alert(err.message || 'Failed to check out.');
+    } finally {
+      setIsActionLoading(false);
+    }
+  };
+
+  const handleStartBreak = async () => {
+    if (isActionLoading) return;
+    setIsActionLoading(true);
+    try {
+      await startBreak();
+    } catch (err) {
+      console.error('Failed to start break:', err);
+      alert(err.message || 'Failed to start break.');
+    } finally {
+      setIsActionLoading(false);
+    }
+  };
+
+  const handleResumeBreak = async () => {
+    if (isActionLoading) return;
+    setIsActionLoading(true);
+    try {
+      await resumeBreak();
+    } catch (err) {
+      console.error('Failed to resume break:', err);
+      alert(err.message || 'Failed to resume break.');
+    } finally {
+      setIsActionLoading(false);
     }
   };
 
@@ -37,6 +85,16 @@ export default function Attendance() {
       duration,
       type: 'Work Session'
     });
+  }
+
+  let displayBreakDuration = '0 mins';
+  if (activeBreak && activeBreak.started_at) {
+    if (activeBreak.ended_at) {
+      const bSec = Math.floor((new Date(activeBreak.ended_at).getTime() - new Date(activeBreak.started_at).getTime()) / 1000);
+      displayBreakDuration = `${Math.floor(bSec / 60)} mins`;
+    } else {
+      displayBreakDuration = 'On Break';
+    }
   }
 
   const attendanceDays = [
@@ -100,21 +158,55 @@ export default function Attendance() {
         </div>
 
         <div className="flex items-center gap-3 self-start sm:self-auto">
-          <span className={`text-xs font-semibold px-2 py-1 rounded border ${isSessionActive ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-100 text-slate-500 border-slate-200'
-            }`}>
-            {isSessionActive ? 'Status: Checked In' : 'Status: Checked Out'}
+          <span className={`text-xs font-semibold px-2 py-1 rounded border ${
+            isSessionActive
+              ? (isOnBreak ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200')
+              : 'bg-slate-100 text-slate-500 border-slate-200'
+          }`}>
+            {isSessionActive ? (isOnBreak ? 'Status: On Break' : 'Status: Checked In') : 'Status: Checked Out'}
           </span>
-          <button
-            onClick={handleToggleCheckIn}
-            disabled={workSession && workSession.clock_out}
-            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-semibold shadow-xs transition-colors ${isSessionActive
-                ? 'bg-slate-900 hover:bg-slate-800 text-white cursor-pointer'
-                : (workSession && workSession.clock_out ? 'bg-slate-200 text-slate-500 cursor-not-allowed' : 'bg-brand-600 hover:bg-brand-700 text-white cursor-pointer')
+          {!isSessionActive ? (
+            <button
+              onClick={handleCheckIn}
+              disabled={isActionLoading || (workSession && workSession.clock_out)}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-semibold shadow-xs transition-colors ${
+                workSession && workSession.clock_out
+                  ? 'bg-slate-200 text-slate-500 cursor-not-allowed'
+                  : 'bg-brand-600 hover:bg-brand-700 text-white cursor-pointer'
               }`}
-          >
-            {isSessionActive ? <LogOut className="w-3.5 h-3.5" /> : <LogIn className="w-3.5 h-3.5" />}
-            <span>{isSessionActive ? 'Check Out' : (workSession && workSession.clock_out ? 'Session Ended' : 'Check In')}</span>
-          </button>
+            >
+              <LogIn className="w-3.5 h-3.5" />
+              <span>{isActionLoading ? 'Checking in...' : (workSession && workSession.clock_out ? 'Session Ended' : 'Check In')}</span>
+            </button>
+          ) : isOnBreak ? (
+            <button
+              onClick={handleResumeBreak}
+              disabled={isActionLoading}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-semibold shadow-xs transition-colors bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer disabled:opacity-50"
+            >
+              <Coffee className="w-3.5 h-3.5" />
+              <span>{isActionLoading ? 'Resuming...' : 'Resume'}</span>
+            </button>
+          ) : (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleStartBreak}
+                disabled={isActionLoading}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-semibold shadow-xs transition-colors bg-amber-600 hover:bg-amber-700 text-white cursor-pointer disabled:opacity-50"
+              >
+                <Coffee className="w-3.5 h-3.5" />
+                <span>{isActionLoading ? 'Starting...' : 'Break'}</span>
+              </button>
+              <button
+                onClick={handleCheckOut}
+                disabled={isActionLoading}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-semibold shadow-xs transition-colors bg-slate-900 hover:bg-slate-800 text-white cursor-pointer disabled:opacity-50"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span>{isActionLoading ? 'Checking out...' : 'Check Out'}</span>
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -180,7 +272,7 @@ export default function Attendance() {
             </div>
             <div className="flex justify-between">
               <span>Break Duration:</span>
-              <span className="font-bold text-amber-700">45 mins</span>
+              <span className="font-bold text-amber-700">{displayBreakDuration}</span>
             </div>
           </div>
         </div>
