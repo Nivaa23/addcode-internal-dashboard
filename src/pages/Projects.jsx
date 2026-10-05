@@ -61,7 +61,7 @@ export default function Projects() {
       if (projErr) throw projErr;
       setProjectsList(projData || []);
 
-      // 2. Fetch employees for manager selection
+      // 2. Fetch employees for manager selection exclusively from public.employees
       const { data: empData, error: empErr } = await supabase
         .from('employees')
         .select('id, full_name, employee_id, employment_status, designation, email');
@@ -69,16 +69,15 @@ export default function Projects() {
       if (empErr) {
         console.error('Error fetching employees for project manager selector:', empErr);
         setEmployeesError(empErr.message || 'Failed to load employees.');
+        setEmployeesList([]);
       } else {
-        // Filter active employees using employment_status
-        const activeEmps = (empData || []).filter(emp => {
-          if (emp.employment_status) {
-            const st = String(emp.employment_status).toLowerCase();
-            return st === 'active' || st === 'employed' || st === 'onboarding';
-          }
-          return true;
+        // Sort real employees alphabetically by full_name
+        const sortedEmps = (empData || []).slice().sort((a, b) => {
+          const nameA = (a.full_name || '').toLowerCase();
+          const nameB = (b.full_name || '').toLowerCase();
+          return nameA.localeCompare(nameB);
         });
-        setEmployeesList(activeEmps);
+        setEmployeesList(sortedEmps);
       }
     } catch (err) {
       console.error('Error fetching projects data:', err);
@@ -268,7 +267,10 @@ export default function Projects() {
   const getProjectManagerName = (managerId) => {
     if (!managerId) return 'Unassigned';
     const emp = employeesList.find(e => e.id === managerId);
-    if (emp) return emp.full_name || emp.email;
+    if (emp) {
+      const code = emp.employee_id ? ` (${emp.employee_id})` : '';
+      return `${emp.full_name || emp.email}${code}`;
+    }
     return `ID: ${managerId.slice(0, 8)}`;
   };
 
