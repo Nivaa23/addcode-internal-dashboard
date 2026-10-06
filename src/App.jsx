@@ -12,6 +12,8 @@ import Leaves from './pages/Leaves';
 import CalendarPage from './pages/CalendarPage';
 import ChangePassword from './pages/ChangePassword';
 
+import Onboarding from './pages/Onboarding';
+
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, mustChangePassword } = useEmployees();
   if (!isAuthenticated) return <Navigate to="/login" replace />;
@@ -48,6 +50,7 @@ function AppRoutes() {
       {/* Protected routes */}
       <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/onboarding" element={<Onboarding />} />
         <Route path="/tasks" element={<Tasks />} />
         <Route path="/projects" element={<Projects />} />
         <Route path="/attendance" element={<Attendance />} />

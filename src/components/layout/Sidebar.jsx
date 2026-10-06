@@ -8,6 +8,7 @@ import {
   CalendarDays,
   Calendar,
   User,
+  UserCheck,
   LogOut
 } from 'lucide-react';
 import { useEmployees } from '../../context/EmployeeContext';
@@ -19,8 +20,12 @@ export default function Sidebar() {
   const currentPath = location.pathname;
   const { currentUser, logout } = useEmployees();
 
+  const userRole = (currentUser?.role || '').toLowerCase();
+  const isAuthorizedForProvisioning = userRole === 'super_admin' || userRole === 'hr';
+
   const menuItems = [
     { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
+    ...(isAuthorizedForProvisioning ? [{ name: 'Account Provisioning', path: '/onboarding', icon: UserCheck }] : []),
     { name: 'My Tasks', path: '/tasks', icon: CheckSquare },
     { name: 'Projects', path: '/projects', icon: FolderKanban },
     { name: 'Attendance', path: '/attendance', icon: Clock },
