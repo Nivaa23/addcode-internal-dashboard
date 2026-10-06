@@ -4,7 +4,6 @@ import { EmployeeProvider, useEmployees } from './context/EmployeeContext';
 import AppLayout from './components/layout/AppLayout';
 import Dashboard from './pages/Dashboard';
 import Login from './pages/Login';
-import SignUp from './pages/SignUp';
 import EmployeeProfile from './pages/EmployeeProfile';
 import Tasks from './pages/Tasks';
 import Projects from './pages/Projects';
@@ -42,7 +41,6 @@ function AppRoutes() {
 
       {/* Anonymous authentication routes */}
       <Route path="/login" element={<AnonymousRoute><Login /></AnonymousRoute>} />
-      <Route path="/signup" element={<AnonymousRoute><SignUp /></AnonymousRoute>} />
 
       {/* Forced Password Change */}
       <Route path="/change-password" element={<ChangePasswordRoute><ChangePassword /></ChangePasswordRoute>} />

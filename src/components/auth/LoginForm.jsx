@@ -1,15 +1,13 @@
 import React, { useState } from 'react';
 import { Mail, Lock, Eye, EyeOff, ArrowRight, Loader2 } from 'lucide-react';
-import OutlookIcon from './OutlookIcon';
 import ForgotPasswordModal from './ForgotPasswordModal';
 
-export default function LoginForm({ onSwitchToSignUp, onLoginSuccess }) {
+export default function LoginForm({ onLoginSuccess }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('••••••••••••');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [loading, setLoading] = useState(false);
-  const [outlookLoading, setOutlookLoading] = useState(false);
   const [error, setError] = useState('');
   const [forgotPasswordOpen, setForgotPasswordOpen] = useState(false);
 
@@ -34,17 +32,6 @@ export default function LoginForm({ onSwitchToSignUp, onLoginSuccess }) {
       setLoading(false);
     }
   };
-
-  const handleOutlookLogin = () => {
-    setError('');
-    setOutlookLoading(true);
-    setTimeout(() => {
-      setOutlookLoading(false);
-      onLoginSuccess('elena.rostova@addcode.engineering', 'sso-outlook-token');
-    }, 600);
-  };
-
-
 
   return (
     <div className="w-full text-left font-sans">
@@ -127,7 +114,7 @@ export default function LoginForm({ onSwitchToSignUp, onLoginSuccess }) {
           </div>
         </div>
 
-        {/* Remember me & Quick Fill */}
+        {/* Remember me */}
         <div className="flex items-center justify-between pt-0.5">
           <label className="flex items-center gap-2 cursor-pointer select-none">
             <input
@@ -143,7 +130,7 @@ export default function LoginForm({ onSwitchToSignUp, onLoginSuccess }) {
         {/* Submit Button */}
         <button
           type="submit"
-          disabled={loading || outlookLoading}
+          disabled={loading}
           className="w-full mt-2 py-2.5 px-4 bg-brand-600 hover:bg-brand-700 active:scale-[0.99] text-white font-semibold rounded-lg text-xs sm:text-sm transition-all duration-200 cursor-pointer shadow-sm hover:shadow flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed font-sans"
         >
           {loading ? (
@@ -159,52 +146,6 @@ export default function LoginForm({ onSwitchToSignUp, onLoginSuccess }) {
           )}
         </button>
       </form>
-
-      {/* Divider */}
-      <div className="relative my-6">
-        <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-slate-200" />
-        </div>
-        <div className="relative flex justify-center text-xs uppercase">
-          <span className="bg-white px-3 text-[11px] font-semibold text-slate-400 tracking-wider">
-            OR
-          </span>
-        </div>
-      </div>
-
-      {/* Microsoft Outlook SSO Button */}
-      <button
-        type="button"
-        onClick={handleOutlookLogin}
-        disabled={loading || outlookLoading}
-        className="w-full py-2.5 px-4 bg-white hover:bg-slate-50/80 active:bg-slate-100 text-slate-700 font-semibold rounded-lg text-xs sm:text-sm border border-slate-200 hover:border-slate-300 transition-all duration-200 cursor-pointer shadow-2xs hover:shadow-xs flex items-center justify-center gap-3 disabled:opacity-70 disabled:cursor-not-allowed group font-sans"
-      >
-        {outlookLoading ? (
-          <>
-            <Loader2 className="w-4 h-4 animate-spin text-sky-600" />
-            <span>Connecting to Outlook SSO...</span>
-          </>
-        ) : (
-          <>
-            <OutlookIcon className="w-4.5 h-4.5 transition-transform duration-200 group-hover:scale-105 shrink-0" />
-            <span>Continue with Outlook</span>
-          </>
-        )}
-      </button>
-
-      {/* Switch to Sign Up */}
-      <div className="mt-7 text-center">
-        <p className="text-xs sm:text-sm text-slate-500">
-          Don't have an account?{' '}
-          <button
-            type="button"
-            onClick={onSwitchToSignUp}
-            className="font-semibold text-brand-600 hover:text-brand-700 hover:underline transition-colors cursor-pointer"
-          >
-            Sign Up
-          </button>
-        </p>
-      </div>
 
       {/* Forgot Password Modal */}
       <ForgotPasswordModal

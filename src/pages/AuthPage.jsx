@@ -1,32 +1,18 @@
 import React from 'react';
-import { useLocation, useNavigate, Link } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate, Link } from 'react-router-dom';
 import { LayoutDashboard, ArrowUpRight } from 'lucide-react';
 import { useEmployees } from '../context/EmployeeContext';
 import AuthBrandSide from '../components/auth/AuthBrandSide';
 import LoginForm from '../components/auth/LoginForm';
-import SignUpForm from '../components/auth/SignUpForm';
 import ThemeSelector from '../components/common/ThemeSelector';
 import logoImg from '../assets/addcode-logo.png';
 
 export default function AuthPage() {
-  const location = useLocation();
   const navigate = useNavigate();
-  const { login, signup } = useEmployees();
-
-  const mode = location.pathname === '/signup' ? 'signup' : 'login';
-
-  const switchMode = (newMode) => {
-    navigate(newMode === 'signup' ? '/signup' : '/login', { replace: true });
-  };
+  const { login } = useEmployees();
 
   const handleLoginSuccess = async (email, password) => {
     await login(email, password);
-    navigate('/dashboard');
-  };
-
-  const handleSignUpSuccess = async ({ name, email, password }) => {
-    await signup({ name, email, password });
     navigate('/dashboard');
   };
 
@@ -76,62 +62,7 @@ export default function AuthPage() {
 
         {/* Center Authentication Card / Form */}
         <main className="w-full max-w-md mx-auto px-6 sm:px-10 py-6 sm:py-8 my-auto">
-          {/* Animated Tab Switcher */}
-          <div className="p-1 bg-slate-100/90 rounded-xl flex items-center mb-8 border border-slate-200/80">
-            <button
-              type="button"
-              onClick={() => switchMode('login')}
-              className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all duration-200 cursor-pointer text-center relative ${
-                mode === 'login'
-                  ? 'bg-white text-slate-900 shadow-sm'
-                  : 'text-slate-500 hover:text-slate-900'
-              }`}
-            >
-              Sign In
-            </button>
-            <button
-              type="button"
-              onClick={() => switchMode('signup')}
-              className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all duration-200 cursor-pointer text-center relative ${
-                mode === 'signup'
-                  ? 'bg-white text-slate-900 shadow-sm'
-                  : 'text-slate-500 hover:text-slate-900'
-              }`}
-            >
-              Create Account
-            </button>
-          </div>
-
-          {/* Form Switching with Framer Motion */}
-          <AnimatePresence mode="wait">
-            {mode === 'login' ? (
-              <motion.div
-                key="login-form"
-                initial={{ opacity: 0, x: -16 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 16 }}
-                transition={{ duration: 0.22, ease: 'easeInOut' }}
-              >
-                <LoginForm
-                  onSwitchToSignUp={() => switchMode('signup')}
-                  onLoginSuccess={handleLoginSuccess}
-                />
-              </motion.div>
-            ) : (
-              <motion.div
-                key="signup-form"
-                initial={{ opacity: 0, x: 16 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -16 }}
-                transition={{ duration: 0.22, ease: 'easeInOut' }}
-              >
-                <SignUpForm
-                  onSwitchToLogin={() => switchMode('login')}
-                  onSignUpSuccess={handleSignUpSuccess}
-                />
-              </motion.div>
-            )}
-          </AnimatePresence>
+          <LoginForm onLoginSuccess={handleLoginSuccess} />
         </main>
 
         {/* Bottom Security / Copyright Bar */}
