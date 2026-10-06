@@ -749,7 +749,7 @@ export default function Projects() {
                         </div>
 
                         {/* Options List (max-h-[185px] shows ~5 employee options with vertical scroll) */}
-                        <div className="max-h-[185px] overflow-y-auto py-1">
+                        <div className="max-h-46.25 overflow-y-auto py-1">
                           {/* Unassigned Option */}
                           {(!pmSearchQuery.trim() || 'unassigned'.includes(pmSearchQuery.toLowerCase().trim())) && (
                             <button
