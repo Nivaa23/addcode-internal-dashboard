@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Users,
   Plus,
@@ -6,7 +7,10 @@ import {
   Loader2,
   Pencil,
   Trash2,
-  AlertTriangle
+  AlertTriangle,
+  Search,
+  ChevronDown,
+  Check
 } from 'lucide-react';
 import { mockTasks } from '../data/mockTasksAndProjects';
 import { useEmployees } from '../context/EmployeeContext';
@@ -27,6 +31,64 @@ export default function Projects() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingProject, setEditingProject] = useState(null);
   const [deletingProject, setDeletingProject] = useState(null);
+
+  // Project Manager Custom Combobox State
+  const [isPmDropdownOpen, setIsPmDropdownOpen] = useState(false);
+  const [pmSearchQuery, setPmSearchQuery] = useState('');
+  const [pmDropdownStyle, setPmDropdownStyle] = useState({});
+  const pmDropdownRef = useRef(null);
+
+  const updatePmDropdownPosition = () => {
+    if (!pmDropdownRef.current) return;
+    const rect = pmDropdownRef.current.getBoundingClientRect();
+    const dropdownEstimatedHeight = 240;
+    const spaceBelow = window.innerHeight - rect.bottom;
+
+    if (spaceBelow < dropdownEstimatedHeight && rect.top > dropdownEstimatedHeight) {
+      setPmDropdownStyle({
+        position: 'fixed',
+        bottom: `${window.innerHeight - rect.top + 4}px`,
+        left: `${rect.left}px`,
+        width: `${rect.width}px`,
+        zIndex: 9999
+      });
+    } else {
+      setPmDropdownStyle({
+        position: 'fixed',
+        top: `${rect.bottom + 4}px`,
+        left: `${rect.left}px`,
+        width: `${rect.width}px`,
+        zIndex: 9999
+      });
+    }
+  };
+
+  useEffect(() => {
+    if (isPmDropdownOpen) {
+      updatePmDropdownPosition();
+      window.addEventListener('resize', updatePmDropdownPosition);
+      window.addEventListener('scroll', updatePmDropdownPosition, true);
+    }
+    return () => {
+      window.removeEventListener('resize', updatePmDropdownPosition);
+      window.removeEventListener('scroll', updatePmDropdownPosition, true);
+    };
+  }, [isPmDropdownOpen]);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (pmDropdownRef.current && !pmDropdownRef.current.contains(event.target)) {
+        // Also check if click was inside portal content
+        const portalEl = document.getElementById('pm-dropdown-portal');
+        if (portalEl && portalEl.contains(event.target)) return;
+        setIsPmDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   // Form handling & async state
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -64,18 +126,19 @@ export default function Projects() {
       // 2. Fetch employees for manager selection exclusively from public.employees
       const { data: empData, error: empErr } = await supabase
         .from('employees')
-        .select('id, full_name, employee_id, employment_status, designation, email');
+        .select('id, full_name, employee_id, employment_status, designation, email')
+        .neq('employee_id', '169');
 
       if (empErr) {
         console.error('Error fetching employees for project manager selector:', empErr);
         setEmployeesError(empErr.message || 'Failed to load employees.');
         setEmployeesList([]);
       } else {
-        // Sort real employees alphabetically by full_name
+        // Sort real employees in ascending numeric order by employee_id
         const sortedEmps = (empData || []).slice().sort((a, b) => {
-          const nameA = (a.full_name || '').toLowerCase();
-          const nameB = (b.full_name || '').toLowerCase();
-          return nameA.localeCompare(nameB);
+          const idA = Number(a.employee_id) || 0;
+          const idB = Number(b.employee_id) || 0;
+          return idA - idB;
         });
         setEmployeesList(sortedEmps);
       }
@@ -103,6 +166,8 @@ export default function Projects() {
       projectManagerId: ''
     });
     setFormError(null);
+    setIsPmDropdownOpen(false);
+    setPmSearchQuery('');
   };
 
   const openCreateModal = () => {
@@ -112,6 +177,8 @@ export default function Projects() {
 
   const openEditModal = (project) => {
     setFormError(null);
+    setIsPmDropdownOpen(false);
+    setPmSearchQuery('');
     setFormData({
       name: project.name || '',
       description: project.description || '',
@@ -123,6 +190,25 @@ export default function Projects() {
     });
     setEditingProject(project);
   };
+
+  const getSelectedPmDisplay = () => {
+    if (!formData.projectManagerId) return 'Unassigned';
+    const emp = employeesList.find((e) => e.id === formData.projectManagerId);
+    if (emp) {
+      const name = emp.full_name || emp.email || 'Unnamed Employee';
+      const code = emp.employee_id ? ` (${emp.employee_id})` : '';
+      return `${name}${code}`;
+    }
+    return `Assigned (ID: ${formData.projectManagerId.slice(0, 8)})`;
+  };
+
+  const filteredPmEmployees = employeesList.filter((emp) => {
+    if (!pmSearchQuery.trim()) return true;
+    const query = pmSearchQuery.toLowerCase().trim();
+    const name = (emp.full_name || emp.email || '').toLowerCase();
+    const code = (emp.employee_id || '').toLowerCase();
+    return name.includes(query) || code.includes(query);
+  });
 
   const handleCreateSubmit = async (e) => {
     e.preventDefault();
@@ -612,7 +698,7 @@ export default function Projects() {
               </div>
 
               {/* Project Manager Selection */}
-              <div className="space-y-1">
+              <div className="space-y-1 relative" ref={pmDropdownRef}>
                 <label className="block font-semibold text-slate-700">Project Manager</label>
                 {employeesLoading ? (
                   <div className="p-2 border border-slate-200 rounded text-xs text-slate-500 flex items-center gap-2 bg-slate-50">
@@ -624,28 +710,115 @@ export default function Projects() {
                     Failed to load employees: {employeesError}
                   </div>
                 ) : (
-                  <select
-                    value={formData.projectManagerId}
-                    onChange={(e) => setFormData({ ...formData, projectManagerId: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-200 rounded text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-600 bg-white cursor-pointer"
-                  >
-                    <option value="">Unassigned</option>
-                    {employeesList.map((emp) => {
-                      const name = emp.full_name || emp.email || 'Unnamed Employee';
-                      const code = emp.employee_id ? ` (${emp.employee_id})` : '';
-                      return (
-                        <option key={emp.id} value={emp.id}>
-                          {name}{code}
-                        </option>
-                      );
-                    })}
-                    {/* Preserve existing project_manager_id if not present in active list */}
-                    {formData.projectManagerId && !employeesList.some(e => e.id === formData.projectManagerId) && (
-                      <option value={formData.projectManagerId}>
-                        {`Assigned (ID: ${formData.projectManagerId.slice(0, 8)})`}
-                      </option>
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setIsPmDropdownOpen((prev) => !prev)}
+                      className="w-full px-3 py-2 border border-slate-200 rounded text-xs text-slate-900 bg-white flex items-center justify-between focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-600 cursor-pointer text-left font-sans"
+                    >
+                      <span className="truncate">{getSelectedPmDisplay()}</span>
+                      <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0 ml-1" />
+                    </button>
+
+                    {isPmDropdownOpen && createPortal(
+                      <div
+                        id="pm-dropdown-portal"
+                        style={pmDropdownStyle}
+                        className="bg-white border border-slate-200 rounded-md shadow-xl overflow-hidden text-xs font-sans"
+                      >
+                        {/* Search Input Bar */}
+                        <div className="p-2 border-b border-slate-100 bg-slate-50/80 flex items-center gap-2">
+                          <Search className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                          <input
+                            type="text"
+                            autoFocus
+                            value={pmSearchQuery}
+                            onChange={(e) => setPmSearchQuery(e.target.value)}
+                            placeholder="Search employee..."
+                            className="w-full text-xs text-slate-900 bg-transparent focus:outline-none placeholder-slate-400 font-sans"
+                          />
+                          {pmSearchQuery && (
+                            <button
+                              type="button"
+                              onClick={() => setPmSearchQuery('')}
+                              className="text-slate-400 hover:text-slate-600 p-0.5 rounded cursor-pointer"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          )}
+                        </div>
+
+                        {/* Options List (max-h-[185px] shows ~5 employee options with vertical scroll) */}
+                        <div className="max-h-[185px] overflow-y-auto py-1">
+                          {/* Unassigned Option */}
+                          {(!pmSearchQuery.trim() || 'unassigned'.includes(pmSearchQuery.toLowerCase().trim())) && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setFormData((prev) => ({ ...prev, projectManagerId: '' }));
+                                setIsPmDropdownOpen(false);
+                                setPmSearchQuery('');
+                              }}
+                              className={`w-full px-3 py-2 text-left flex items-center justify-between hover:bg-slate-50 transition-colors cursor-pointer ${
+                                !formData.projectManagerId ? 'bg-brand-50 text-brand-700 font-bold' : 'text-slate-700 font-medium'
+                              }`}
+                            >
+                              <span>Unassigned</span>
+                              {!formData.projectManagerId && <Check className="w-3.5 h-3.5 text-brand-600 shrink-0" />}
+                            </button>
+                          )}
+
+                          {/* Employee List Options */}
+                          {filteredPmEmployees.map((emp) => {
+                            const isSelected = formData.projectManagerId === emp.id;
+                            const name = emp.full_name || emp.email || 'Unnamed Employee';
+                            const code = emp.employee_id ? ` (${emp.employee_id})` : '';
+
+                            return (
+                              <button
+                                key={emp.id}
+                                type="button"
+                                onClick={() => {
+                                  setFormData((prev) => ({ ...prev, projectManagerId: emp.id }));
+                                  setIsPmDropdownOpen(false);
+                                  setPmSearchQuery('');
+                                }}
+                                className={`w-full px-3 py-2 text-left flex items-center justify-between hover:bg-slate-50 transition-colors cursor-pointer ${
+                                  isSelected ? 'bg-brand-50 text-brand-700 font-bold' : 'text-slate-700 font-medium'
+                                }`}
+                              >
+                                <span className="truncate">{name}{code}</span>
+                                {isSelected && <Check className="w-3.5 h-3.5 text-brand-600 shrink-0 ml-2" />}
+                              </button>
+                            );
+                          })}
+
+                          {/* Preserved Assigned PM Option if not present in list */}
+                          {formData.projectManagerId && !employeesList.some((e) => e.id === formData.projectManagerId) && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setIsPmDropdownOpen(false);
+                                setPmSearchQuery('');
+                              }}
+                              className="w-full px-3 py-2 text-left flex items-center justify-between bg-brand-50 text-brand-700 font-bold hover:bg-slate-50 transition-colors cursor-pointer"
+                            >
+                              <span className="truncate">{`Assigned (ID: ${formData.projectManagerId.slice(0, 8)})`}</span>
+                              <Check className="w-3.5 h-3.5 text-brand-600 shrink-0 ml-2" />
+                            </button>
+                          )}
+
+                          {/* No Search Results */}
+                          {filteredPmEmployees.length === 0 && (!'unassigned'.includes(pmSearchQuery.toLowerCase().trim()) || pmSearchQuery.trim() !== '') && (
+                            <div className="px-3 py-3 text-center text-slate-400 text-xs font-medium">
+                              No employee found matching "{pmSearchQuery}"
+                            </div>
+                          )}
+                        </div>
+                      </div>,
+                      document.body
                     )}
-                  </select>
+                  </>
                 )}
               </div>
 

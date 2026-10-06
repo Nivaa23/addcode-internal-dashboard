@@ -77,7 +77,8 @@ export const EmployeeProvider = ({ children }) => {
             employee_id: employeeData.employee_id,
             auth_user_id: employeeData.auth_user_id,
             name: employeeData.full_name || employeeData.name || session.user.email?.split('@')[0],
-            role: employeeData.designation || employeeData.role || 'Employee'
+            role: employeeData.role || 'employee',
+            designation: employeeData.designation
           });
           setMustChangePassword(employeeData.must_change_password);
 
