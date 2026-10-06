@@ -13,11 +13,23 @@ import CalendarPage from './pages/CalendarPage';
 import ChangePassword from './pages/ChangePassword';
 
 import Onboarding from './pages/Onboarding';
+import { normalizeRole, canProvisionAccounts } from './lib/permissions';
 
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, mustChangePassword } = useEmployees();
   if (!isAuthenticated) return <Navigate to="/login" replace />;
   if (mustChangePassword) return <Navigate to="/change-password" replace />;
+  return children;
+};
+
+const RoleRoute = ({ children, checkPermission }) => {
+  const { isAuthenticated, mustChangePassword, currentUser } = useEmployees();
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (mustChangePassword) return <Navigate to="/change-password" replace />;
+  
+  if (checkPermission && !checkPermission(currentUser?.role)) {
+    return <Navigate to="/dashboard" replace />;
+  }
   return children;
 };
 
@@ -50,7 +62,11 @@ function AppRoutes() {
       {/* Protected routes */}
       <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
         <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/onboarding" element={<Onboarding />} />
+        <Route path="/onboarding" element={
+          <RoleRoute checkPermission={canProvisionAccounts}>
+            <Onboarding />
+          </RoleRoute>
+        } />
         <Route path="/tasks" element={<Tasks />} />
         <Route path="/projects" element={<Projects />} />
         <Route path="/attendance" element={<Attendance />} />

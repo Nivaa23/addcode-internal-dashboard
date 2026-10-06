@@ -2,11 +2,16 @@ import React, { useState } from 'react';
 import {
   Plus,
   Upload,
-  X
+  X,
+  Check,
+  XCircle
 } from 'lucide-react';
+import { useEmployees } from '../context/EmployeeContext';
+import { canApproveLeaves } from '../lib/permissions';
 
 export default function Leaves() {
-
+  const { currentUser } = useEmployees();
+  const isApprover = canApproveLeaves(currentUser?.role);
 
   const [leaveBalances] = useState({
     casual: { allocated: 10, used: 3, remaining: 7 },
@@ -36,6 +41,16 @@ export default function Leaves() {
   const totalUsed = leaveBalances.casual.used + leaveBalances.sick.used + leaveBalances.earned.used;
   const pendingCount = leaveHistory.filter(h => h.status === 'Pending').length;
   const totalRemaining = leaveBalances.casual.remaining + leaveBalances.sick.remaining + leaveBalances.earned.remaining;
+
+  const handleApproveLeave = (id) => {
+    if (!isApprover) return;
+    setLeaveHistory(prev => prev.map(item => item.id === id ? { ...item, status: 'Approved' } : item));
+  };
+
+  const handleRejectLeave = (id) => {
+    if (!isApprover) return;
+    setLeaveHistory(prev => prev.map(item => item.id === id ? { ...item, status: 'Rejected' } : item));
+  };
 
   const handleFormSubmit = (e) => {
     e.preventDefault();
@@ -195,7 +210,8 @@ export default function Leaves() {
                 <th className="py-2.5 px-4">Duration Dates</th>
                 <th className="py-2.5 px-4">Days</th>
                 <th className="py-2.5 px-4">Reason</th>
-                <th className="py-2.5 px-4 text-right">Status</th>
+                <th className="py-2.5 px-4">Status</th>
+                {isApprover && <th className="py-2.5 px-4 text-right">Actions</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -205,7 +221,31 @@ export default function Leaves() {
                   <td className="py-2.5 px-4 text-slate-600">{item.startDate} to {item.endDate}</td>
                   <td className="py-2.5 px-4 font-bold text-slate-900">{item.days} {item.days > 1 ? 'Days' : 'Day'}</td>
                   <td className="py-2.5 px-4 text-slate-500 max-w-xs truncate">{item.reason}</td>
-                  <td className="py-2.5 px-4 text-right">{getStatusBadge(item.status)}</td>
+                  <td className="py-2.5 px-4">{getStatusBadge(item.status)}</td>
+                  {isApprover && (
+                    <td className="py-2.5 px-4 text-right">
+                      {item.status === 'Pending' ? (
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            onClick={() => handleApproveLeave(item.id)}
+                            className="inline-flex items-center gap-1 px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[10px] font-bold transition-colors cursor-pointer"
+                            title="Approve Leave"
+                          >
+                            <Check className="w-3 h-3" /> Approve
+                          </button>
+                          <button
+                            onClick={() => handleRejectLeave(item.id)}
+                            className="inline-flex items-center gap-1 px-2 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-[10px] font-bold transition-colors cursor-pointer"
+                            title="Reject Leave"
+                          >
+                            <XCircle className="w-3 h-3" /> Reject
+                          </button>
+                        </div>
+                      ) : (
+                        <span className="text-[10px] text-slate-400 font-semibold">Completed</span>
+                      )}
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>

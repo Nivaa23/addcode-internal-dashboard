@@ -3,13 +3,15 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { Search, MapPin, Briefcase, Calendar, UserMinus, Eye } from 'lucide-react';
 import { useEmployees } from '../context/EmployeeContext';
+import { canManageDirectory } from '../lib/permissions';
 import Card from '../components/common/Card';
 import Input from '../components/common/Input';
 import Badge from '../components/common/Badge';
 import Button from '../components/common/Button';
 
 const EmployeeList = () => {
-  const { employees, terminateEmployee } = useEmployees();
+  const { employees, currentUser, terminateEmployee } = useEmployees();
+  const isManagerOrHr = canManageDirectory(currentUser?.role);
   const [search, setSearch] = useState('');
   const [selectedDept, setSelectedDept] = useState('All');
   const [selectedLoc, setSelectedLoc] = useState('All');
@@ -39,6 +41,7 @@ const EmployeeList = () => {
   const handleDelete = (id, name, e) => {
     e.preventDefault();
     e.stopPropagation();
+    if (!isManagerOrHr) return;
     if (window.confirm(`Are you sure you want to offboard ${name}? This will remove them from the active dashboard directory.`)) {
       terminateEmployee(id);
     }
@@ -127,7 +130,7 @@ const EmployeeList = () => {
 
                   {/* Profile info */}
                   <div className="flex items-center gap-3.5 mb-5">
-                    <div className="w-12 h-12 rounded-xl bg-brand-50 border border-brand-100 flex items-center justify-center text-brand-700 font-bold text-base shadow-sm">
+                    <div className="w-12 h-12 rounded-xl bg-brand-50 border border-brand-100 flex items-center justify-center text-brand-700 font-bold text-base shadow-xs">
                       {getInitials(emp.name)}
                     </div>
                     <div className="min-w-0">
@@ -169,15 +172,17 @@ const EmployeeList = () => {
                       View Details
                     </Button>
                   </Link>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-red-500 hover:text-red-700 hover:bg-red-50 border border-transparent hover:border-red-100 rounded-lg p-2 shrink-0 cursor-pointer"
-                    onClick={(e) => handleDelete(emp.id, emp.name, e)}
-                    title="Offboard Employee"
-                  >
-                    <UserMinus className="w-4 h-4" />
-                  </Button>
+                  {isManagerOrHr && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-red-500 hover:text-red-700 hover:bg-red-50 border border-transparent hover:border-red-100 rounded-lg p-2 shrink-0 cursor-pointer"
+                      onClick={(e) => handleDelete(emp.id, emp.name, e)}
+                      title="Offboard Employee"
+                    >
+                      <UserMinus className="w-4 h-4" />
+                    </Button>
+                  )}
                 </div>
               </Card>
             </motion.div>

@@ -15,9 +15,12 @@ import {
 import { mockTasks } from '../data/mockTasksAndProjects';
 import { useEmployees } from '../context/EmployeeContext';
 import { supabase } from '../lib/supabase';
+import { canManageProjects } from '../lib/permissions';
 
 export default function Projects() {
   const { currentUser } = useEmployees();
+
+  const isManager = canManageProjects(currentUser?.role);
 
   const [projectsList, setProjectsList] = useState([]);
   const [employeesList, setEmployeesList] = useState([]);
@@ -171,11 +174,13 @@ export default function Projects() {
   };
 
   const openCreateModal = () => {
+    if (!isManager) return;
     resetForm();
     setIsCreateOpen(true);
   };
 
   const openEditModal = (project) => {
+    if (!isManager) return;
     setFormError(null);
     setIsPmDropdownOpen(false);
     setPmSearchQuery('');
@@ -212,6 +217,7 @@ export default function Projects() {
 
   const handleCreateSubmit = async (e) => {
     e.preventDefault();
+    if (!isManager) return;
     if (!formData.name.trim()) {
       setFormError('Project Name is required.');
       return;
@@ -248,6 +254,7 @@ export default function Projects() {
 
   const handleEditSubmit = async (e) => {
     e.preventDefault();
+    if (!isManager) return;
     if (!formData.name.trim()) {
       setFormError('Project Name is required.');
       return;
@@ -291,7 +298,7 @@ export default function Projects() {
   };
 
   const handleConfirmDelete = async () => {
-    if (!deletingProject?.id) return;
+    if (!isManager || !deletingProject?.id) return;
 
     setIsDeleting(true);
     setFormError(null);
@@ -389,12 +396,14 @@ export default function Projects() {
           <h1 className="text-xl font-bold text-slate-900 font-display">Engineering Projects</h1>
           <p className="text-xs text-slate-500 mt-0.5">Active software deliverables, team allocations, and target schedules.</p>
         </div>
-        <button
-          onClick={openCreateModal}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-brand-600 hover:bg-brand-700 text-white rounded text-xs font-semibold shadow-xs transition-colors self-start sm:self-auto cursor-pointer"
-        >
-          <Plus className="w-3.5 h-3.5" /> New Project
-        </button>
+        {isManager && (
+          <button
+            onClick={openCreateModal}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-brand-600 hover:bg-brand-700 text-white rounded text-xs font-semibold shadow-xs transition-colors self-start sm:self-auto cursor-pointer"
+          >
+            <Plus className="w-3.5 h-3.5" /> New Project
+          </button>
+        )}
       </div>
 
       {/* Loading State */}
@@ -436,28 +445,30 @@ export default function Projects() {
                     {getStatusBadge(project.status)}
                     {getPriorityBadge(project.priority)}
                   </div>
-                  <div className="flex items-center gap-1">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        openEditModal(project);
-                      }}
-                      className="p-1 text-slate-400 hover:text-brand-600 rounded hover:bg-slate-100 transition-colors cursor-pointer"
-                      title="Edit Project"
-                    >
-                      <Pencil className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setDeletingProject(project);
-                      }}
-                      className="p-1 text-slate-400 hover:text-red-600 rounded hover:bg-slate-100 transition-colors cursor-pointer"
-                      title="Delete Project"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
+                  {isManager && (
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openEditModal(project);
+                        }}
+                        className="p-1 text-slate-400 hover:text-brand-600 rounded hover:bg-slate-100 transition-colors cursor-pointer"
+                        title="Edit Project"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDeletingProject(project);
+                        }}
+                        className="p-1 text-slate-400 hover:text-red-600 rounded hover:bg-slate-100 transition-colors cursor-pointer"
+                        title="Delete Project"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 <div onClick={() => setSelectedProject(project)} className="cursor-pointer">
@@ -509,26 +520,30 @@ export default function Projects() {
                 <h3 className="text-base font-bold text-slate-900">{selectedProject.name}</h3>
               </div>
               <div className="flex items-center gap-2">
-                <button
-                  onClick={() => {
-                    const p = selectedProject;
-                    setSelectedProject(null);
-                    openEditModal(p);
-                  }}
-                  className="px-2.5 py-1.5 bg-white border border-slate-200 rounded text-slate-700 hover:text-brand-600 hover:border-brand-300 transition-colors flex items-center gap-1 font-semibold cursor-pointer"
-                >
-                  <Pencil className="w-3.5 h-3.5" /> Edit
-                </button>
-                <button
-                  onClick={() => {
-                    const p = selectedProject;
-                    setSelectedProject(null);
-                    setDeletingProject(p);
-                  }}
-                  className="px-2.5 py-1.5 bg-white border border-red-200 rounded text-red-600 hover:bg-red-50 transition-colors flex items-center gap-1 font-semibold cursor-pointer"
-                >
-                  <Trash2 className="w-3.5 h-3.5" /> Delete
-                </button>
+                {isManager && (
+                  <>
+                    <button
+                      onClick={() => {
+                        const p = selectedProject;
+                        setSelectedProject(null);
+                        openEditModal(p);
+                      }}
+                      className="px-2.5 py-1.5 bg-white border border-slate-200 rounded text-slate-700 hover:text-brand-600 hover:border-brand-300 transition-colors flex items-center gap-1 font-semibold cursor-pointer"
+                    >
+                      <Pencil className="w-3.5 h-3.5" /> Edit
+                    </button>
+                    <button
+                      onClick={() => {
+                        const p = selectedProject;
+                        setSelectedProject(null);
+                        setDeletingProject(p);
+                      }}
+                      className="px-2.5 py-1.5 bg-white border border-red-200 rounded text-red-600 hover:bg-red-50 transition-colors flex items-center gap-1 font-semibold cursor-pointer"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" /> Delete
+                    </button>
+                  </>
+                )}
                 <button onClick={() => setSelectedProject(null)} className="text-slate-400 hover:text-slate-600 p-1 rounded">
                   <X className="w-5 h-5" />
                 </button>

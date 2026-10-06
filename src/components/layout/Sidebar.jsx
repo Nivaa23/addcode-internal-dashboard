@@ -12,6 +12,7 @@ import {
   LogOut
 } from 'lucide-react';
 import { useEmployees } from '../../context/EmployeeContext';
+import { canProvisionAccounts, formatRoleDisplay } from '../../lib/permissions';
 import logoImg from '../../assets/addcode-logo.png';
 
 export default function Sidebar() {
@@ -20,8 +21,7 @@ export default function Sidebar() {
   const currentPath = location.pathname;
   const { currentUser, logout } = useEmployees();
 
-  const userRole = (currentUser?.role || '').toLowerCase();
-  const isAuthorizedForProvisioning = userRole === 'super_admin' || userRole === 'hr';
+  const isAuthorizedForProvisioning = canProvisionAccounts(currentUser?.role);
 
   const menuItems = [
     { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
@@ -104,7 +104,7 @@ export default function Sidebar() {
               {currentUser.name}
             </span>
             <span className="text-[10px] text-slate-500 truncate leading-tight mt-0.5 font-sans">
-              {currentUser.role}
+              {formatRoleDisplay(currentUser?.role)}
             </span>
           </div>
         </div>
