@@ -173,20 +173,74 @@ serve(async (req: Request) => {
       );
     }
 
-    // Reject if employee already has an Auth account linked
+    const isReprovision = Boolean(body.is_reprovision || body.action === "reprovision");
+
+    // Handle existing linked Auth user vs new provisioning
     if (targetEmployee.auth_user_id) {
+      if (!isReprovision) {
+        return new Response(
+          JSON.stringify({
+            error: `Provisioning failed. Employee '${targetEmployee.full_name}' (ID: ${targetEmployee.employee_id}) already has a linked Auth account.`,
+          }),
+          { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // RE-PROVISION / RESET ACCOUNT ACCESS FLOW
+      const tempPassword = generateTemporaryPassword();
+
+      // Reset password of EXISTING Supabase Auth user
+      const { error: resetAuthErr } = await adminClient.auth.admin.updateUserById(
+        targetEmployee.auth_user_id,
+        { password: tempPassword }
+      );
+
+      if (resetAuthErr) {
+        return new Response(
+          JSON.stringify({
+            error: `Failed to reset password for existing Auth user: ${resetAuthErr.message}`,
+          }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Update public.employees to set must_change_password = true
+      const { error: dbUpdateErr } = await adminClient
+        .from("employees")
+        .update({
+          must_change_password: true,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", targetEmployee.id);
+
+      if (dbUpdateErr) {
+        return new Response(
+          JSON.stringify({
+            error: `Password reset succeeded for Auth user, but updating must_change_password in database failed: ${dbUpdateErr.message}`,
+          }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
       return new Response(
         JSON.stringify({
-          error: `Provisioning failed. Employee '${targetEmployee.full_name}' (ID: ${targetEmployee.employee_id}) already has a linked Auth account.`,
+          success: true,
+          is_reprovision: true,
+          employee_id: targetEmployee.employee_id,
+          full_name: targetEmployee.full_name,
+          email: targetEmployee.email,
+          auth_user_id: targetEmployee.auth_user_id,
+          temporary_password: tempPassword,
+          must_change_password: true,
         }),
-        { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // 10. Generate Server-Side Temporary Password
+    // NEW ACCOUNT PROVISIONING FLOW
     const tempPassword = generateTemporaryPassword();
 
-    // 11. Create Supabase Auth User via Admin API
+    // Create Supabase Auth User via Admin API
     const { data: newAuthData, error: createAuthErr } = await adminClient.auth.admin.createUser({
       email: targetEmployee.email.trim(),
       password: tempPassword,
@@ -209,7 +263,7 @@ serve(async (req: Request) => {
 
     const newAuthUserId = newAuthData.user.id;
 
-    // 12. Link Auth User ID & Set must_change_password = true in public.employees
+    // Link Auth User ID & Set must_change_password = true in public.employees
     const { error: dbUpdateErr } = await adminClient
       .from("employees")
       .update({
@@ -235,10 +289,11 @@ serve(async (req: Request) => {
       );
     }
 
-    // 13. Return Success Response for UI consumption
+    // Return Success Response for UI consumption
     return new Response(
       JSON.stringify({
         success: true,
+        is_reprovision: false,
         employee_id: targetEmployee.employee_id,
         full_name: targetEmployee.full_name,
         email: targetEmployee.email,
